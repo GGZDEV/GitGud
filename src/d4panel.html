@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>GameHelper — Diablo IV</title>
+<style>
+  :root { color-scheme: dark; --bg: #110f15; --card: #1a1720; --card2: #221e2a; --line: #2e2836; --fg: #ece6ee; --muted: #9b92a3; --accent: #c0392b; --accent2: #e8a03a; --ok: #4ade80; --ko: #f87171; --warn: #fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1200px 500px at 50% -200px, #2a1218, var(--bg)); color: var(--fg); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 16px 22px 0; }
+  header h1 { font: 700 20px/1 Georgia, "Times New Roman", serif; letter-spacing: .08em; margin: 0; color: #f4d9a8; text-transform: uppercase; }
+  header .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+  .status.on { color: var(--ok); } .status.off { color: var(--muted); } .status.bad { color: var(--ko); }
+  nav { display: flex; gap: 4px; padding: 12px 22px 0; border-bottom: 1px solid var(--line); }
+  nav button { background: none; border: 0; color: var(--muted); padding: 10px 14px; font: inherit; cursor: pointer; border-bottom: 2px solid transparent; }
+  nav button.on { color: var(--fg); border-bottom-color: var(--accent2); }
+  main { padding: 18px 22px 40px; max-width: 1100px; }
+  .tab { display: none; } .tab.on { display: block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  h2 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input[type=text], select { background: #0d0b10; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; }
+  input[type=text] { flex: 1; min-width: 200px; }
+  button.btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 5px 11px; font: inherit; cursor: pointer; }
+  button.ghost:hover { border-color: var(--accent2); }
+  button.icon { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: 14px; }
+  button.icon:hover { color: var(--fg); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--card2); color: var(--muted); border: 1px solid var(--line); }
+  .badge.src { color: var(--accent2); }
+  .build { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 8px; cursor: pointer; }
+  .build.active { border-color: var(--accent2); background: var(--card2); }
+  .build .name { font-weight: 600; }
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .slot h3 { margin: 0 0 6px; font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+  .slot h3 small { color: var(--muted); font-weight: 400; }
+  .affix { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; align-items: center; padding: 3px 0; border-bottom: 1px dashed #2a2431; font-size: 13px; }
+  .affix .n { color: var(--muted); font-size: 11px; text-align: right; }
+  .affix .tools { display: flex; }
+  .star { color: var(--muted); } .star.on { color: var(--warn); }
+  .sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 8px 0 2px; }
+  .add { display: flex; gap: 6px; margin-top: 6px; } .add input { min-width: 0; font-size: 12.5px; padding: 5px 8px; }
+  .savebar { position: sticky; bottom: 0; display: none; justify-content: flex-end; gap: 8px; padding: 10px; background: linear-gradient(transparent, var(--bg) 40%); }
+  .savebar.on { display: flex; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; vertical-align: top; padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .v { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .v-top { background: rgba(34,197,94,.18); color: #4ade80; } .v-good { background: rgba(163,230,53,.15); color: #bef264; }
+  .v-meh { background: rgba(245,158,11,.15); color: #fbbf24; } .v-bad { background: rgba(239,68,68,.15); color: #f87171; } .v-neutral { background: rgba(148,163,184,.12); color: var(--muted); }
+  .ok { color: var(--ok); } .ko { color: var(--ko); } .muted { color: var(--muted); }
+  ul.check { list-style: none; padding: 0; margin: 0; } ul.check li { padding: 3px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Diablo IV</h1>
+  <span class="badge" id="activeName">Aucun build</span>
+  <span class="status off" id="status">Jeu : …</span>
+</header>
+<nav>
+  <button data-tab="builds" class="on">Builds</button>
+  <button data-tab="prio">Priorités</button>
+  <button data-tab="equip">Équipement</button>
+  <button data-tab="conn">Connexion &amp; scan</button>
+</nav>
+<main>
+  <section class="tab on" id="tab-builds">
+    <div class="card">
+      <h2>Importer un build</h2>
+      <div class="row"><input type="text" id="url" placeholder="Lien Mobalytics, Maxroll (planificateur ou guide) ou D4Builds"><button class="btn" id="import">Importer</button></div>
+      <div class="hint" id="importInfo">Le même lien importé à nouveau met à jour le build existant (tes modifications sur ce build sont alors remplacées).</div>
+    </div>
+    <div class="card">
+      <h2>Mes builds</h2>
+      <div id="builds"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="newName" placeholder="Nom d'un build à créer soi-même">
+        <button class="ghost" id="newBuild">Créer un build vierge</button>
+      </div>
+    </div>
+    <div class="card" id="variantCard" style="display:none">
+      <h2>Variante suivie</h2>
+      <select id="variant"></select>
+      <div class="hint">La fiche d'objet, le scan et l'IA comparent tes objets à cette variante.</div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-prio">
+    <div class="hint" style="margin:-4px 0 12px">L'ordre des affixes = leur priorité (1 = le plus important). ★ = voulu en affixe supérieur. Tes changements s'appliquent à la fiche d'objet, au scan et à l'IA après enregistrement.</div>
+    <div class="slots" id="slots"></div>
+    <datalist id="affixList"></datalist>
+    <div class="savebar" id="savebar"><button class="ghost" id="cancel">Annuler les modifications</button><button class="btn" id="save">Enregistrer les priorités</button></div>
+  </section>
+
+  <section class="tab" id="tab-equip">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Mon équipement face au build</h2>
+        <div class="row"><button class="ghost" id="sync">Liste de contrôle</button><button class="ghost" id="refreshEquip">↻</button></div>
+      </div>
+      <div class="hint">Plus besoin de synchroniser : ouvre ta fiche de personnage dans le jeu et survole simplement tes pièces portées, elles sont reconnues automatiquement (un objet du sac, lui, affiche des écarts de comparaison). Le bouton affiche juste une liste de contrôle dans l'overlay pour voir ce qu'il reste à survoler.</div>
+      <table><thead><tr><th>Emplacement</th><th>Visé par le build</th><th>Porté</th><th>Évaluation</th></tr></thead><tbody id="equipRows"></tbody></table>
+    </div>
+    <div class="card"><h2>Dernier scan du sac</h2><div id="invRows" class="muted">Aucun scan pour l'instant.</div></div>
+  </section>
+
+  <section class="tab" id="tab-conn">
+    <div class="card">
+      <h2>Connexion au jeu</h2>
+      <div id="connStatus"></div>
+      <ul class="check hint" style="margin-top:8px">
+        <li>Options → Accessibilité : « Lecteur d'écran » et « Lecteur d'écran tiers » activés</li>
+        <li>Options → Jeu : « Informations d'infobulle avancées » activé (fourchettes [min - max])</li>
+        <li>DLL <code>saapi64.dll</code> dans le dossier du jeu (installée par l'outil de D4LF)</li>
+        <li>D4LF fermé : les deux ne peuvent pas écouter en même temps</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Fiche d'objet et scan</h2>
+      <label class="row"><input type="checkbox" id="card"> Afficher la fiche d'objet (✓ / ✗ par affixe) à chaque survol</label>
+      <div class="row" style="margin-top:10px"><button class="ghost" id="calib">Calibrer l'inventaire</button><span class="hint" id="calibInfo"></span></div>
+      <div class="hint" id="scanInfo"></div>
+    </div>
+  </section>
+</main>
+<script src="d4panel.js"></script>
+</body>
+</html>

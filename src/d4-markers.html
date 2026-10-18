@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; font: 600 13px "Segoe UI", sans-serif; }
+  /* Repère posé sur une case de l'inventaire après un scan */
+  .m { position: absolute; width: 26px; height: 26px; margin: -38px 0 0 10px; border-radius: 50%; display: grid; place-items: center;
+       color: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 0 12px currentColor; animation: pop .25s ease-out both; }
+  .m span { color: #fff; }
+  .top { background: #16a34a; color: #22c55e; }
+  .good { background: #65a30d; color: #a3e635; }
+  .meh { background: #b45309; color: #f59e0b; }
+  .bad { background: #b91c1c; color: #ef4444; opacity: .85; }
+  .neutral { background: #475569; color: #94a3b8; opacity: .7; }
+  .calib { background: #7c3aed; color: #a78bfa; width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
+</style>
+</head>
+<body>
+<script>
+  const ICON = { top: "★", good: "✓", meh: "~", bad: "✗", neutral: "·", calib: "" };
+  window.api.on("markers", (cells) => {
+    document.body.innerHTML = "";
+    cells.forEach((c, i) => {
+      const el = document.createElement("div");
+      el.className = "m " + c.level;
+      el.style.left = c.x + "px";
+      el.style.top = c.y + "px";
+      el.style.animationDelay = i * 12 + "ms";
+      el.innerHTML = `<span>${ICON[c.level] ?? "·"}</span>`;
+      el.title = c.label || "";
+      document.body.appendChild(el);
+    });
+  });
+</script>
+</body>
+</html>

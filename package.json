@@ -1,0 +1,60 @@
+{
+  "name": "gamehelper",
+  "version": "0.7.1",
+  "description": "Assistant IA open source pour jeux PC (voix + vision) : abonnement ChatGPT/Claude ou clés API, Whisper local",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron scripts/smoke-test.js",
+    "dist": "electron-builder --win nsis --config electron-builder.config.js",
+    "dist:full": "node scripts/prepare-models.js && electron-builder --win nsis --config electron-builder.full.js",
+    "detect": "electron scripts/detect-test.js",
+    "preview": "electron scripts/overlay-preview.js",
+    "release": "electron-builder --win nsis --config electron-builder.config.js --publish always"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@huggingface/transformers": "^4.3.1",
+    "electron-updater": "^6.8.9",
+    "espeak-ng": "^1.0.2",
+    "koffi": "^3.3.3",
+    "onnxruntime-node": "^1.30.0",
+    "openai": "^7.33.0",
+    "uiohook-napi": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "local.gamehelper",
+    "productName": "GameHelper",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json",
+      "!node_modules/onnxruntime-web/**",
+      "!node_modules/onnxruntime-node/bin/napi-v*/darwin/**",
+      "!node_modules/onnxruntime-node/bin/napi-v*/linux/**",
+      "!node_modules/onnxruntime-node/bin/napi-v*/win32/arm64/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "artifactName": "GameHelper-Setup-${version}.${ext}"
+    },
+    "npmRebuild": false,
+    "asar": false
+  },
+  "license": "MIT",
+  "updates": {
+    "owner": "",
+    "repo": "gamehelper"
+  }
+}
