@@ -1,5 +1,5 @@
-// Mascottes (style emblème, SVG originaux animés en CSS via mascots.css). Le choix de la
-// mascotte est indépendant de la personnalité : réglage « mascot ».
+// Mascottes (style emblème, SVG originaux animés en CSS via mascots.css). Chaque mascotte est
+// un personnage complet (ton, voix : src/personalities.js) : réglage « mascot ».
 // Utilisable dans toute page : <script src="ui/mascots.js"> puis Mascots.render(el, "slime", "idle").
 (function () {
   const DEFAULT = "slime";
@@ -181,23 +181,40 @@
     for (const s of ["idle", "listening", "thinking", "transcribing", "speaking", "error"]) el.classList.toggle(s, s === (state || "idle"));
   }
 
-  // Grille de choix (paramètres, assistant) : onPick(id) à chaque clic.
-  function picker(box, selected, onPick) {
+  // Grille de choix du personnage (paramètres, assistant) : onPick(id) à chaque clic.
+  // personas : { id: { name, title, tagline } } (settings:get) · onVoice(id, bouton) : extrait de voix.
+  function picker(box, selected, onPick, { personas = {}, onVoice } = {}) {
     box.classList.add("mascot-picker");
     box.innerHTML = "";
     for (const [id, m] of Object.entries(META)) {
-      const tile = document.createElement("button");
-      tile.type = "button";
+      const p = personas[id] || {};
+      const tile = document.createElement("div");
+      tile.tabIndex = 0;
       tile.className = "mp-tile" + (id === ID(selected) ? " on" : "");
       tile.style.setProperty("--tint", m.tint);
       tile.title = m.desc;
-      tile.innerHTML = `<div class="mp-art"></div><div class="mp-name"></div>`;
-      tile.querySelector(".mp-name").textContent = m.name;
+      tile.innerHTML = `<div class="mp-art"></div><div class="mp-name"></div><div class="mp-title"></div><div class="mp-tag"></div>`;
+      tile.querySelector(".mp-name").textContent = p.name || m.name;
+      tile.querySelector(".mp-title").textContent = p.title || "";
+      tile.querySelector(".mp-tag").textContent = p.tagline || "";
       render(tile.querySelector(".mp-art"), id, id === ID(selected) ? "speaking" : "idle");
-      tile.onclick = () => {
-        picker(box, id, onPick);
+      if (onVoice) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "mp-voice";
+        b.textContent = "▶ Voix";
+        b.onclick = (e) => {
+          e.stopPropagation();
+          onVoice(id, b);
+        };
+        tile.appendChild(b);
+      }
+      const pick = () => {
+        picker(box, id, onPick, { personas, onVoice });
         onPick(id);
       };
+      tile.onclick = pick;
+      tile.onkeydown = (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick());
       box.appendChild(tile);
     }
   }

@@ -85,6 +85,7 @@ function createOverlay() {
     ...overlaySize(),
     frame: false,
     transparent: true,
+    hasShadow: false, // pas d'ombre de fenêtre Windows autour de la zone transparente
     resizable: false,
     skipTaskbar: true,
     focusable: false,
@@ -108,8 +109,11 @@ function openSettings() {
     return;
   }
   settingsWin = new BrowserWindow({
-    width: 620,
-    height: 820,
+    width: 940,
+    height: 760,
+    minWidth: 520,
+    minHeight: 480,
+    backgroundColor: "#07090d",
     title: "GameHelper — Paramètres",
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload.js") },
@@ -333,7 +337,7 @@ async function ask(question) {
     const game = detectGame(shot?.name || settings.target?.name, windows);
     send("config", overlayConfig(game ? `${game.name}${game.context ? " · données en direct" : ""}` : shot?.name));
     const context = await gameContext(game, { question, settings });
-    const system = buildSystemPrompt(settings.personality, settings.language, game?.name || shot?.name || settings.target?.name || "inconnue");
+    const system = buildSystemPrompt(settings.mascot, settings.language, game?.name || shot?.name || settings.target?.name || "inconnue");
     const answer = await ai.chat({
       settings,
       system,
@@ -374,7 +378,7 @@ function speechText(text) {
 async function voice(fullText, seq) {
   const text = speechText(fullText);
   if (!text) return;
-  const p = PERSONALITIES[settings.personality] || PERSONALITIES.kin;
+  const p = PERSONALITIES[settings.mascot] || PERSONALITIES.slime;
   const systemVoice = () => send("tts-system", { text, voice: settings.systemVoice, language: settings.language, ...p.systemVoice });
 
   // Voix OpenAI (clé API)
@@ -395,7 +399,7 @@ async function voice(fullText, seq) {
 
   // Voix neuronale locale (Piper) : une voix différente par personnalité
   if (settings.ttsEngine !== "system") {
-    const v = voiceFor(settings.personality, settings.language, text);
+    const v = voiceFor(settings.mascot, settings.language, text);
     if (v) {
       try {
         const wav = await ai.tts.speak(text, v);
@@ -413,7 +417,7 @@ async function voice(fullText, seq) {
 // Charge à l'avance la voix de la personnalité, pour que la première réponse soit rapide.
 function preloadVoice() {
   if (settings.voiceEnabled && !["system", "openai"].includes(settings.ttsEngine)) {
-    const v = voiceFor(settings.personality, settings.language === "auto" ? "fr" : settings.language, "");
+    const v = voiceFor(settings.mascot, settings.language === "auto" ? "fr" : settings.language, "");
     if (v) ai.tts.preload(v.voice).catch((err) => console.warn("Piper :", err.message));
   }
 }
@@ -652,7 +656,8 @@ ipcMain.handle("hotkeys:defaults", () => ({
 
 ipcMain.handle("settings:get", () => ({
   settings,
-  personalities: Object.fromEntries(Object.entries(PERSONALITIES).map(([k, v]) => [k, { name: v.name, tagline: v.tagline, voice: v.voice, systemVoice: v.systemVoice }])),
+  version: app.getVersion(),
+  personalities: Object.fromEntries(Object.entries(PERSONALITIES).map(([k, v]) => [k, { name: v.name, title: v.title, tagline: v.tagline, sample: v.sample, voice: v.voice, systemVoice: v.systemVoice }])),
 }));
 
 ipcMain.handle("settings:save", (_e, next) => {
@@ -734,8 +739,7 @@ function overlayConfig(context) {
   return {
     hotkeys: hotkeys.labels(),
     pinned,
-    personality: settings.personality,
-    name: (PERSONALITIES[settings.personality] || PERSONALITIES.kin).name,
+    name: (PERSONALITIES[settings.mascot] || PERSONALITIES.slime).name,
     mascot: settings.mascot,
     version: app.getVersion(),
     autoHideSeconds: settings.autoHideSeconds,

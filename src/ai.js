@@ -6,7 +6,7 @@
 //   anthropic-api → clé API Anthropic
 //   openai-api    → clé API OpenAI
 // Transcription : whisper local (gratuit) ou API OpenAI.
-// Voix : Piper local (une voix par personnalité), voix Windows, ou API OpenAI.
+// Voix : Piper local (une voix par personnage), voix Windows, ou API OpenAI.
 const path = require("path");
 const api = require("./providers/api");
 const { ClaudeCli } = require("./providers/claude-cli");

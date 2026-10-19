@@ -42,13 +42,6 @@
   #recBtn.rec { background: #ff4d6d; }
   .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 12px 0; }
   kbd { background: #0f0d16; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 2px 8px; font: 13px "Segoe UI", sans-serif; }
-  .persos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .perso { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-  .perso button { margin-top: auto !important; }
-  .perso.selected { border-color: var(--accent); background: var(--card2); }
-  .perso .pname { font-weight: 700; letter-spacing: .06em; margin-top: 4px; }
-  .perso .ptag { font-size: 11px; color: var(--muted); min-height: 32px; }
-  .perso button { margin-top: 6px; }
   .hk-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
   .hk-key { background: #0f0d16; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 10px; font: 13px "Segoe UI", sans-serif; min-width: 90px; text-align: center; }
   .hk-row.capturing .hk-key { border-color: var(--accent); color: var(--accent); }
@@ -85,7 +78,7 @@
 
     <label>Voix des réponses</label>
     <select id="ttsEngine">
-      <option value="piper">Voix neuronales locales — une voix par personnalité (gratuit, hors ligne) · recommandé</option>
+      <option value="piper">Voix neuronales locales — une voix par personnage (gratuit, hors ligne) · recommandé</option>
       <option value="system">Voix Windows (gratuit, robotique)</option>
       <option value="openai">Voix OpenAI (clé API, la plus naturelle)</option>
     </select>
@@ -103,10 +96,8 @@
     <div class="hint">Lance ton jeu d'abord pour le voir dans la liste. « Écran entier » marche avec tous les jeux. Mets le jeu en <b>fenêtré sans bordure</b> pour voir l'overlay par-dessus.</div>
     <div class="check"><input type="checkbox" id="useVision"><span>Joindre une capture à chaque question</span></div>
     <div class="check"><input type="checkbox" id="webSearch"><span>Recherche web pour les infos à jour (patchs, builds, méta)</span></div>
-    <label>Personnalité</label>
-    <select id="personality" hidden></select>
-    <div class="persos" id="persos"></div>
-    <label>Mascotte</label>
+    <label>Ton personnage</label>
+    <div class="hint" style="margin:0 0 8px">Chaque mascotte a son caractère et sa voix : écoute-les avec ▶.</div>
     <input type="hidden" id="mascot">
     <div id="mascotPicker"></div>
     <label>Langue des réponses</label>

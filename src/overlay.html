@@ -14,8 +14,8 @@
     --mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
   }
   html, body { margin: 0; background: transparent; font: 500 14.5px/1.4 var(--title); color: var(--fg); overflow: hidden; user-select: none; }
-  /* Ombre portée sur l'enveloppe : la découpe (clip-path) de la carte la masquerait. */
-  #wrap { margin: 6px; filter: drop-shadow(0 12px 22px rgba(0,0,0,.5)); opacity: 0; transform: translateY(-8px) scale(.98); transition: opacity .25s, transform .25s; }
+  /* Pas d'ombre portée : sur une fenêtre transparente, un filtre CSS dessine un rectangle gris. */
+  #wrap { margin: 6px; opacity: 0; transform: translateY(-8px) scale(.98); transition: opacity .25s, transform .25s; }
   #wrap.shown { opacity: 1; transform: none; }
   #card {
     position: relative; padding: 1.5px; background: linear-gradient(135deg, var(--a), var(--b));

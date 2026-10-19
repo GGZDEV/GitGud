@@ -27,7 +27,7 @@
       const btn = row.querySelector("button");
       btn.onclick = async () => {
         btn.disabled = true;
-        row.querySelector(".hk-key").textContent = "Appuie sur une touche… (Échap : annuler)";
+        row.querySelector(".hk-key").textContent = "Appuie sur la touche ou la combinaison… (Échap : annuler)";
         row.classList.add("capturing");
         const r = await window.api.invoke("hotkeys:capture", action);
         row.classList.remove("capturing");
@@ -64,7 +64,7 @@
 
     const hint = document.createElement("div");
     hint.className = "hint";
-    hint.textContent = "Touche du clavier (avec Ctrl / Alt / Maj si tu veux), bouton latéral de souris, ou bouton de manette Xbox / compatible : pratique pour parler sans lâcher la manette.";
+    hint.textContent = "N'importe quelle touche seule (F10…) ou combinaison (Ctrl + A, Maj + F2…), bouton latéral de souris, ou bouton de manette Xbox / compatible. Maintiens les modificateurs puis appuie sur la touche.";
     container.appendChild(hint);
 
     return { get: () => bindings };

@@ -10,7 +10,12 @@ const { Gamepad, padLabel } = require("./gamepad");
 
 const K = uiohook?.UiohookKey || {};
 const KEY_NAMES = Object.fromEntries(Object.entries(K).map(([name, code]) => [code, name]));
-const MODIFIERS = new Set([K.Alt, K.AltRight, K.Ctrl, K.CtrlRight, K.Shift, K.ShiftRight, K.Meta, K.MetaRight].filter((x) => x !== undefined));
+// Touche de modificateur → famille (alt, ctrl, shift, meta).
+const MODIFIERS = new Map(
+  [[K.Alt, "alt"], [K.AltRight, "alt"], [K.Ctrl, "ctrl"], [K.CtrlRight, "ctrl"], [K.Shift, "shift"], [K.ShiftRight, "shift"], [K.Meta, "meta"], [K.MetaRight, "meta"]]
+    .filter(([code]) => code !== undefined),
+);
+const MOD_NAMES = ["alt", "ctrl", "shift", "meta"];
 
 // Codes uiohook (scancodes) : V=47, T=20, X=45, O=24
 const DEFAULT_HOTKEYS = {
@@ -44,8 +49,7 @@ function label(b) {
   return parts.join(" + ");
 }
 
-const mods = (e) => ({ alt: !!e.altKey, ctrl: !!e.ctrlKey, shift: !!e.shiftKey, meta: !!e.metaKey });
-const sameMods = (b, e) => !!b.alt === !!e.altKey && !!b.ctrl === !!e.ctrlKey && !!b.shift === !!e.shiftKey && !!b.meta === !!e.metaKey;
+const sameMods = (b, m) => MOD_NAMES.every((k) => !!b[k] === !!m[k]);
 
 // Touche de modificateur correspondant à une option de raccourci (pour le relâchement du PTT).
 function isModifierOf(b, keycode) {
@@ -62,7 +66,10 @@ class Hotkeys {
   constructor(handlers) {
     this.handlers = handlers;
     this.bindings = { ...DEFAULT_HOTKEYS };
-    this.capturing = null; // { resolve, timer }
+    this.capturing = null; // { resolve, timer, mods }
+    // Modificateurs réellement enfoncés, suivis touche par touche : le masque d'uiohook peut
+    // rester bloqué (ex. Alt après un Alt+Tab) et ajouter un Alt fantôme à F10 ou Ctrl+A.
+    this.held = new Set();
     this.pttHeld = false;
     this.available = !!uiohook;
     this.gamepad = new Gamepad();
@@ -83,7 +90,10 @@ class Hotkeys {
     if (!uiohook) return false;
     const { uIOhook } = uiohook;
     uIOhook.on("keydown", (e) => this.onDown({ type: "key", keycode: e.keycode }, e));
-    uIOhook.on("keyup", (e) => this.onUp({ type: "key", keycode: e.keycode }));
+    uIOhook.on("keyup", (e) => {
+      if (MODIFIERS.has(e.keycode)) this.held.delete(MODIFIERS.get(e.keycode));
+      this.onUp({ type: "key", keycode: e.keycode });
+    });
     uIOhook.on("mousedown", (e) => this.onDown({ type: "mouse", button: e.button }, e));
     uIOhook.on("mouseup", (e) => this.onUp({ type: "mouse", button: e.button }));
     uIOhook.start();
@@ -97,25 +107,37 @@ class Hotkeys {
     } catch {}
   }
 
-  matches(b, input, e) {
+  // Modificateurs actifs : suivis par nous ET confirmés par le masque de l'événement.
+  mods(e, from = this.held) {
+    const flag = { alt: e.altKey, ctrl: e.ctrlKey, shift: e.shiftKey, meta: e.metaKey };
+    return Object.fromEntries(MOD_NAMES.map((k) => [k, from.has(k) && flag[k] !== false]));
+  }
+
+  matches(b, input, m) {
     if (!b || b.type !== input.type) return false;
     if (input.type === "key" ? b.keycode !== input.keycode : b.button !== input.button) return false;
-    return input.type === "pad" || sameMods(b, e);
+    return input.type === "pad" || sameMods(b, m);
   }
 
   onDown(input, e) {
+    if (input.type === "key" && MODIFIERS.has(input.keycode)) {
+      const mod = MODIFIERS.get(input.keycode);
+      this.held.add(mod);
+      this.capturing?.mods.add(mod);
+    }
     if (this.capturing) return this.captureInput(input, e);
+    const m = this.mods(e);
     if (input.type === "key" && input.keycode === K.Escape) this.handlers.escape?.();
     const b = this.bindings;
-    if (this.matches(b.ptt, input, e)) {
+    if (this.matches(b.ptt, input, m)) {
       if (!this.pttHeld) {
         this.pttHeld = true;
         this.handlers.pttDown();
       }
-    } else if (this.matches(b.text, input, e)) this.handlers.text();
-    else if (this.matches(b.hide, input, e)) this.handlers.hide();
-    else if (this.matches(b.toggle, input, e)) this.handlers.toggle();
-    else if (this.matches(b.d4scan, input, e)) this.handlers.d4scan?.();
+    } else if (this.matches(b.text, input, m)) this.handlers.text();
+    else if (this.matches(b.hide, input, m)) this.handlers.hide();
+    else if (this.matches(b.toggle, input, m)) this.handlers.toggle();
+    else if (this.matches(b.d4scan, input, m)) this.handlers.d4scan?.();
   }
 
   onUp(input) {
@@ -134,7 +156,7 @@ class Hotkeys {
     this.cancelCapture();
     return new Promise((resolve) => {
       const timer = setTimeout(() => this.finishCapture(null), 15000);
-      this.capturing = { resolve, timer };
+      this.capturing = { resolve, timer, mods: new Set() }; // modificateurs pressés pendant la capture
     });
   }
 
@@ -146,7 +168,10 @@ class Hotkeys {
       return; // clic gauche / droit : réservés
     }
     if (input.type === "pad") return this.finishCapture({ type: "pad", button: input.button });
-    this.finishCapture({ ...input, ...mods(e) });
+    // Seuls les modificateurs enfoncés depuis le début de la capture comptent : F10 seul reste F10.
+    const m = this.mods(e, this.capturing.mods);
+    for (const k of MOD_NAMES) if (!this.held.has(k)) m[k] = false;
+    this.finishCapture({ ...input, ...Object.fromEntries(MOD_NAMES.filter((k) => m[k]).map((k) => [k, true])) });
   }
 
   finishCapture(binding) {

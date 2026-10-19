@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const FIELDS = [
   "provider", "codexModel", "codexEffort", "claudeCliModel", "anthropicModel", "effort", "openaiModel",
-  "anthropicKey", "openaiKey", "personality", "mascot", "language",
+  "anthropicKey", "openaiKey", "mascot", "language",
   "sttEngine", "whisperModel", "whisperDevice", "ttsEngine", "systemVoice", "ttsVoice", "autoHideSeconds", "deadlockAccountId",
 ];
 const CHECKS = ["webSearch", "useVision", "voiceEnabled", "overlayCompact"];
@@ -10,6 +10,59 @@ const RANGES = { overlayScale: (v) => `${Math.round(v * 100)} %`, overlayOpacity
 let current;
 let hotkeyEditor = null;
 let cli = { claude: false, codex: false };
+let personas = {};
+
+// Onglets de navigation (le dernier ouvert est retenu pour la session).
+function showTab(tab) {
+  document.querySelectorAll("nav [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll("[data-panel]").forEach((p) => p.classList.toggle("on", p.dataset.panel === tab));
+  try {
+    sessionStorage.setItem("tab", tab);
+  } catch {}
+}
+document.querySelectorAll("nav [data-tab]").forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+
+// Portrait du personnage choisi, en haut de la navigation.
+function showWho(id, state = "idle") {
+  const p = personas[id] || {};
+  window.Mascots.render($("who"), id, state);
+  $("whoName").innerHTML = "";
+  $("whoName").append(p.name || "", Object.assign(document.createElement("em"), { textContent: "." }));
+  $("whoTag").textContent = (p.title || "").toLowerCase();
+}
+
+// Extrait de voix du personnage, avec le moteur de synthèse choisi.
+async function playSample(id, btn) {
+  const p = personas[id];
+  const engine = $("ttsEngine").value;
+  showWho(id, "speaking");
+  const done = () => showWho($("mascot").value, "idle");
+  if (engine === "piper") {
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "…";
+    const r = await window.api.invoke("setup:voice-sample", { mascot: id, language: $("language").value, text: p.sample });
+    btn.disabled = false;
+    btn.textContent = label;
+    if (r.ok) {
+      const a = new Audio(URL.createObjectURL(new Blob([r.wav], { type: "audio/wav" })));
+      a.preservesPitch = false;
+      a.playbackRate = r.pitch;
+      a.onended = done;
+      return a.play();
+    }
+    done();
+    return alert("Voix locale : " + r.error);
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(p.sample);
+  u.pitch = p.systemVoice?.pitch ?? 1;
+  u.rate = p.systemVoice?.rate ?? 1;
+  const voices = speechSynthesis.getVoices();
+  u.voice = voices.find((v) => v.name === $("systemVoice").value) || voices.find((v) => v.lang.startsWith("fr")) || null;
+  u.onend = done;
+  speechSynthesis.speak(u);
+}
 
 // Affiche uniquement les réglages du moteur choisi.
 function refreshVisibility() {
@@ -60,14 +113,10 @@ async function loadSources(selected) {
 }
 
 async function init() {
-  const { settings, personalities } = await window.api.invoke("settings:get");
+  const { settings, personalities, version } = await window.api.invoke("settings:get");
   current = settings;
-  for (const [id, p] of Object.entries(personalities)) {
-    const o = document.createElement("option");
-    o.value = id;
-    o.textContent = `${p.name} — ${p.tagline}`;
-    $("personality").appendChild(o);
-  }
+  personas = personalities;
+  $("ver").textContent = `v${version} · ONLINE`;
   loadSystemVoices(settings.systemVoice);
   speechSynthesis.onvoiceschanged = () => loadSystemVoices($("systemVoice").value || current.systemVoice);
   for (const f of FIELDS) $(f).value = settings[f] ?? "";
@@ -78,7 +127,21 @@ async function init() {
     $(id).oninput = show;
     show();
   }
-  window.Mascots.picker($("mascotPicker"), settings.mascot, (id) => ($("mascot").value = id));
+  window.Mascots.picker(
+    $("mascotPicker"),
+    settings.mascot,
+    (id) => {
+      $("mascot").value = id;
+      showWho(id);
+    },
+    { personas, onVoice: playSample },
+  );
+  showWho(settings.mascot);
+  let tab = "perso";
+  try {
+    tab = sessionStorage.getItem("tab") || tab;
+  } catch {}
+  showTab(tab);
   hotkeyEditor = await window.HotkeysUI.mount($("hotkeys"));
   cli = await window.api.invoke("cli:status");
   refreshVisibility();

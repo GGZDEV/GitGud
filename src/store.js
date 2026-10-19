@@ -3,6 +3,7 @@
 const { app, safeStorage } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { PERSONALITIES, LEGACY } = require("./personalities");
 
 const DEFAULTS = {
   // "claude-cli" | "codex-cli" (abonnements) | "anthropic-api" | "openai-api" (clés API)
@@ -13,8 +14,7 @@ const DEFAULTS = {
   anthropicModel: "claude-opus-5-5",
   openaiModel: "gpt-5-mini",
   effort: "low", // Claude API : low = réponses rapides en jeu
-  personality: "kin",
-  mascot: "slime", // slime | mech | wraith | wolf | lich | orc (voir src/ui/mascots.js)
+  mascot: "slime", // personnage = mascotte + ton + voix : slime | mech | wraith | wolf | lich | orc
   language: "auto",
   target: { id: "screen", name: "Écran entier" },
   useVision: true,
@@ -72,6 +72,10 @@ function load() {
   // Anciennes valeurs (v0.1)
   if (s.provider === "anthropic") s.provider = "anthropic-api";
   if (s.provider === "openai") s.provider = "openai-api";
+  // Avant la fusion personnalité / mascotte : le personnage suit l'ancienne personnalité.
+  if (!raw.mascot && raw.personality) s.mascot = LEGACY[raw.personality] || DEFAULTS.mascot;
+  if (!PERSONALITIES[s.mascot]) s.mascot = DEFAULTS.mascot;
+  delete s.personality;
   for (const k of SECRET_FIELDS) s[k] = decrypt(raw[k]);
   return s;
 }

@@ -13,7 +13,7 @@ const { app, BrowserWindow } = require("electron");
 
 // Profil de test
 fs.mkdirSync(path.join(profile, "d4"), { recursive: true });
-fs.writeFileSync(path.join(profile, "settings.json"), JSON.stringify({ setupDone: true, personality: "gremlin", voiceEnabled: false }));
+fs.writeFileSync(path.join(profile, "settings.json"), JSON.stringify({ setupDone: true, mascot: "lich", voiceEnabled: false }));
 const equippedGloves = {
   name: "POIGNES DU CRÉPUSCULE", typeLine: "Gants ancestraux légendaires", slot: "gloves", rarity: "legendary", power: 800,
   implicits: [], tempered: [], lostWhenEquipped: [], hasComparison: false,

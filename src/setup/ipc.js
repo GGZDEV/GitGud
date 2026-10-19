@@ -111,8 +111,8 @@ function registerSetupIpc({ getSettings, ai }) {
   });
 
   // Extrait de la voix Piper d'une personnalité (téléchargée au besoin).
-  ipcMain.handle("setup:voice-sample", async (_e, { personality, language, text }) => {
-    const v = voiceFor(personality, language, text);
+  ipcMain.handle("setup:voice-sample", async (_e, { mascot, language, text }) => {
+    const v = voiceFor(mascot, language, text);
     if (!v) return { ok: false, error: "Pas de voix locale pour cette langue." };
     try {
       return { ok: true, wav: await ai.tts.speak(text, v), pitch: v.pitch || 1 };

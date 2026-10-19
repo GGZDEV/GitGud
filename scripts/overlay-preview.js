@@ -8,16 +8,14 @@ const out = process.argv.find((a, i) => i > 1 && !a.endsWith(".js")) || path.joi
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const SCENES = [
-  { file: "1-ecoute-kin", personality: "kin", mascot: "slime", events: [["state", "listening"]] },
+  { file: "1-ecoute-kin", mascot: "slime", events: [["state", "listening"]] },
   {
     file: "2-reflexion-axiom",
-    personality: "axiom",
     mascot: "mech",
     events: [["user-text", "Je prends quoi comme arme pour ce boss ?"], ["state", "thinking"]],
   },
   {
     file: "3-reponse-gremlin",
-    personality: "gremlin",
     mascot: "wolf",
     events: [
       ["user-text", "Tu partirais sur lequel pour ce build ?"],
@@ -27,13 +25,11 @@ const SCENES = [
   },
   {
     file: "4-reponse-razor",
-    personality: "razor",
     mascot: "orc",
     events: [["user-text", "Je fais quoi là ?"], ["assistant-done", "Recule derrière le mur. Soigne-toi. Ensuite, flanc gauche."], ["state", "idle"]],
   },
   {
     file: "6-sources-razor",
-    personality: "razor",
     mascot: "lich",
     events: [
       ["user-text", "Je prends quoi contre Haze avec Infernus ?"],
@@ -43,20 +39,17 @@ const SCENES = [
   },
   {
     file: "7-compact-kin",
-    personality: "kin",
     mascot: "slime",
     config: { compact: true, opacity: 0.75 },
     events: [["user-text", "On fait quoi ?"], ["assistant-done", "Recule derrière le mur, soigne-toi, puis attaque par le flanc gauche quand leur tank a utilisé son bouclier."], ["state", "speaking"]],
   },
   {
     file: "8-diablo-fiche",
-    personality: "gremlin",
     mascot: "wraith",
     events: () => [["d4-item", require("../build/d4/card-payload.json")]],
   },
   {
     file: "5-zenith-erreur",
-    personality: "zenith",
     mascot: "wraith",
     events: [["state", "idle"], ["error", "Codex n'est pas connecté. Reconnecte-toi depuis l'assistant de configuration."]],
   },
@@ -66,14 +59,12 @@ app.on("window-all-closed", () => {}); // on ferme chaque fenêtre entre deux sc
 
 app.whenReady().then(async () => {
   fs.mkdirSync(out, { recursive: true });
-  let personality = "kin";
   let mascot = "slime";
   const { PERSONALITIES } = require("../src/personalities");
-  ipcMain.handle("overlay:config", () => ({ personality, mascot, name: PERSONALITIES[personality].name, version: require("../package.json").version, autoHideSeconds: 0, context: "Path of Exile 2" }));
+  ipcMain.handle("overlay:config", () => ({ mascot, name: PERSONALITIES[mascot].name, version: require("../package.json").version, autoHideSeconds: 0, context: "Path of Exile 2" }));
   ipcMain.on("tray:icon", (_e, url) => fs.writeFileSync(path.join(out, `icone-${mascot}.png`), Buffer.from(url.split(",")[1], "base64")));
 
   for (const scene of SCENES) {
-    personality = scene.personality;
     mascot = scene.mascot || "slime";
     const win = new BrowserWindow({
       width: 440,

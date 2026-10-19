@@ -76,9 +76,17 @@
 
 /* Grille de choix de la mascotte (paramètres, assistant) */
 .mascot-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.mp-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 7px; margin: 0; cursor: pointer;
-  background: radial-gradient(circle at 50% 45%, var(--tint), transparent 70%), #0d0c14; color: #cfcbe0;
-  border: 1px solid rgba(255,255,255,.08); border-radius: 10px; font: 600 11.5px "Segoe UI", system-ui, sans-serif; letter-spacing: .03em; }
-.mp-tile:hover { border-color: rgba(75,227,193,.45); }
-.mp-tile.on { border-color: #4be3c1; box-shadow: 0 0 0 1px #4be3c1, 0 0 14px rgba(75,227,193,.25); color: #fff; }
-.mp-art { width: 64px; height: 64px; }
+.mp-tile { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 9px; cursor: pointer; text-align: center; outline: none;
+  background: radial-gradient(circle at 50% 30%, var(--tint), transparent 70%), #0a0d12; color: #cfd8de;
+  border: 1px solid rgba(75,227,193,.14); font: 500 12px "Segoe UI", system-ui, sans-serif;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: border-color .15s, background-color .15s; }
+.mp-tile:hover, .mp-tile:focus-visible { border-color: rgba(75,227,193,.5); }
+.mp-tile.on { border-color: #4be3c1; background-color: #0c1d1c; box-shadow: inset 0 0 0 1px #4be3c1, inset 0 0 22px rgba(75,227,193,.18); }
+.mp-art { width: 68px; height: 68px; margin-bottom: 4px; }
+.mp-name { font: 700 17px/1.1 "Rajdhani", "Bahnschrift SemiCondensed", "Bahnschrift", sans-serif; letter-spacing: .08em; color: #fff; }
+.mp-tile.on .mp-name { color: #4be3c1; text-shadow: 0 0 10px rgba(75,227,193,.45); }
+.mp-title { font: 400 10.5px "Cascadia Mono", Consolas, monospace; color: #7d8b96; text-transform: lowercase; }
+.mp-tag { font-size: 11px; color: #9fb0ba; margin-top: 4px; min-height: 2.6em; }
+.mp-voice { margin-top: 6px; background: transparent; border: 1px solid rgba(75,227,193,.3); color: #4be3c1; padding: 3px 10px; cursor: pointer; font: 600 10.5px "Cascadia Mono", Consolas, monospace; letter-spacing: .06em; border-radius: 0; }
+.mp-voice:hover { background: rgba(75,227,193,.1); }
+.mp-voice:disabled { opacity: .5; }

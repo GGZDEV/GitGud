@@ -6,202 +6,347 @@
 <link rel="stylesheet" href="ui/mascots.css">
 <title>GameHelper — Paramètres</title>
 <style>
-  :root { color-scheme: dark; --bg: #121019; --card: #1b1826; --line: #2c2840; --fg: #ece9f5; --muted: #9a94ad; --accent: #8b50f0; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
-  main { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.sub { color: var(--muted); margin: 0 0 18px; }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
-  h2 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
-  label { display: block; margin: 10px 0 4px; }
+  /* Même identité que l'overlay « néon » : coins biseautés, cyan / violet, typo condensée + mono. */
+  :root {
+    color-scheme: dark;
+    --bg: #07090d; --panel: #0b0f14; --field: #060a0e; --line: rgba(75,227,193,.16); --line2: rgba(75,227,193,.32);
+    --a: #4be3c1; --b: #8b5cf6; --fg: #e6fff9; --txt: #cfd8de; --muted: #7d8b96; --ok: #4ade80; --err: #ff6b6b;
+    --title: "Rajdhani", "Bahnschrift SemiCondensed", "Bahnschrift", "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
+    --cut: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: radial-gradient(ellipse at 85% -10%, rgba(139,92,246,.14), transparent 50%), radial-gradient(ellipse at 0% 110%, rgba(75,227,193,.10), transparent 45%), var(--bg);
+    color: var(--txt); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(75,227,193,.025) 0 1px, transparent 1px 3px); }
+
+  /* Barre du haut */
+  .top { display: flex; justify-content: space-between; align-items: center; padding: 8px 18px; font: 600 11px var(--mono); letter-spacing: .12em; color: var(--a);
+    background: rgba(75,227,193,.06); border-bottom: 1px solid var(--line); }
+  .top #ver { color: #6b7c86; }
+
+  .layout { display: grid; grid-template-columns: 210px 1fr; min-height: 0; }
+
+  /* Navigation */
+  nav { border-right: 1px solid var(--line); padding: 18px 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+  .who { display: flex; align-items: center; gap: 12px; padding: 0 16px 18px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .hex { width: 56px; height: 60px; flex: none; padding: 2px; background: linear-gradient(160deg, var(--a), var(--b)); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+  .hex .slot { width: 100%; height: 100%; clip-path: inherit; padding: 9px 6px 6px; background: radial-gradient(circle at 50% 65%, #123b37, #070b10 75%); }
+  #who { width: 100%; height: 100%; } #who::before { display: none; }
+  #whoName { font: 700 24px/.9 var(--title); letter-spacing: .06em; color: #fff; text-shadow: 0 0 12px rgba(75,227,193,.45); }
+  #whoName em { font-style: normal; color: var(--a); }
+  #whoTag { font: 400 10.5px var(--mono); color: var(--muted); margin-top: 5px; }
+  nav button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 14px; border-left: 2px solid transparent;
+    font: 600 15px var(--title); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  nav button i { font: 400 10px var(--mono); color: #3b4a52; width: 18px; font-style: normal; }
+  nav button:hover { color: var(--txt); background: rgba(75,227,193,.04); }
+  nav button.on { color: var(--a); border-left-color: var(--a); background: linear-gradient(90deg, rgba(75,227,193,.10), transparent); }
+  nav button.on i { color: var(--a); }
+  nav button:focus-visible { outline: 1px solid var(--a); outline-offset: -1px; }
+
+  /* Contenu */
+  main { overflow-y: auto; padding: 22px 26px 30px; scrollbar-color: #1d2a30 transparent; }
+  .panel { display: none; max-width: 640px; animation: in .2s ease-out; }
+  .panel.on { display: block; }
+  @keyframes in { from { opacity: 0; transform: translateY(4px); } }
+  h1 { margin: 0; font: 700 28px/1 var(--title); letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+  h1 em { font-style: normal; color: var(--a); }
+  .lead { margin: 6px 0 18px; color: var(--muted); font-size: 13px; }
+  .group { position: relative; padding: 14px 16px 16px; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--line); clip-path: var(--cut); }
+  .group > h2 { margin: 0 0 4px; font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--a); }
+  .group > h2::before { content: "// "; color: #3b4a52; }
+  label { display: block; margin: 12px 0 5px; font: 600 12.5px var(--title); letter-spacing: .08em; text-transform: uppercase; color: var(--txt); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   .row { display: flex; gap: 8px; align-items: center; }
-  input[type=text], input[type=password], input[type=number], select { width: 100%; box-sizing: border-box; background: #0f0d16; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font: inherit; }
-  .check { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
-  button { background: var(--accent); color: white; border: 0; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
-  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--fg); }
-  input[type=range] { width: 100%; accent-color: var(--accent); }
-  code { background: #0f0d16; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
-  .hk-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
-  .hk-key { background: #0f0d16; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 10px; font: 13px "Segoe UI", sans-serif; min-width: 90px; text-align: center; }
-  .hk-row.capturing .hk-key { border-color: var(--accent); color: var(--accent); }
-  #saved { color: #3ddc97; margin-left: 10px; opacity: 0; transition: opacity .3s; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; background: var(--field); color: var(--fg); border: 1px solid var(--line); border-left: 2px solid var(--line2);
+    padding: 8px 10px; font: 13.5px "Segoe UI", system-ui, sans-serif; outline: none; border-radius: 0; }
+  input:focus, select:focus { border-color: var(--a); box-shadow: 0 0 0 3px rgba(75,227,193,.12); }
+  select option { background: #0b0f14; }
+  input[type=range] { width: 100%; accent-color: var(--a); }
+  .val { font: 600 11px var(--mono); color: var(--a); margin-left: 6px; letter-spacing: .04em; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 2px; cursor: pointer; color: var(--txt); }
+  .check input { appearance: none; flex: none; width: 16px; height: 16px; margin: 2px 0 0; border: 1px solid var(--line2); background: var(--field); cursor: pointer; display: grid; place-items: center; }
+  .check input:checked { border-color: var(--a); background: rgba(75,227,193,.15); }
+  .check input:checked::after { content: ""; width: 8px; height: 8px; background: var(--a); box-shadow: 0 0 6px var(--a); }
+  label.check { font: 14px/1.4 "Segoe UI", system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .status { font: 12px var(--mono); margin-top: 8px; color: var(--muted); }
+  code { font: 12px var(--mono); color: var(--a); background: rgba(75,227,193,.07); padding: 1px 5px; }
+  button { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; border-radius: 0; }
+  button.ghost { background: transparent; color: var(--a); border: 1px solid var(--line2); padding: 7px 12px; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  button.ghost:hover { background: rgba(75,227,193,.08); border-color: var(--a); }
+  button.small { padding: 5px 10px; font-size: 11px; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  /* Personnage : grille de mascottes */
+  #mascotPicker.mascot-picker { gap: 10px; }
+
+  /* Raccourcis */
+  #hotkeys > button { margin-top: 12px; }
+  .hk-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .hk-action { color: var(--txt); }
+  .hk-key { font: 600 12px var(--mono); letter-spacing: .04em; color: var(--a); background: rgba(75,227,193,.06); border: 1px solid var(--line2); padding: 4px 12px; min-width: 110px; text-align: center; text-transform: uppercase; }
+  .hk-row.capturing .hk-key { color: #facc15; border-color: #facc15; animation: blink .8s infinite; text-transform: none; }
+  @keyframes blink { 50% { opacity: .5; } }
+
+  /* Barre d'enregistrement */
+  .bottom { display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 12px 22px; border-top: 1px solid var(--line); background: rgba(7,9,13,.92); }
+  #saved { font: 600 11px var(--mono); letter-spacing: .1em; color: var(--ok); opacity: 0; transition: opacity .3s; }
+  #save { border: 0; color: #041512; background: linear-gradient(135deg, var(--a), #38bfa3); padding: 10px 26px; font-size: 12.5px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+  #save:hover { filter: brightness(1.1); }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; border-right: 0; border-bottom: 1px solid var(--line); padding: 0; }
+    .who { display: none; }
+    nav button { border-left: 0; border-bottom: 2px solid transparent; white-space: nowrap; padding: 10px 12px; }
+    nav button.on { border-bottom-color: var(--a); }
+    .two { grid-template-columns: 1fr; }
+    .mascot-picker { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
 </head>
 <body>
-<main>
-  <h1>GameHelper</h1>
-  <p class="sub">Assistant IA en jeu : voix, vision et personnalités.</p>
+<div class="top"><span>GAMEHELPER // PARAMÈTRES</span><span id="ver">ONLINE</span></div>
 
-  <section>
-    <h2>IA</h2>
-    <label>Moteur des réponses</label>
-    <select id="provider">
-      <option value="codex-cli">ChatGPT — abonnement (via Codex)</option>
-      <option value="claude-cli">Claude — abonnement Pro/Max (via Claude Code)</option>
-      <option value="anthropic-api">Claude — clé API</option>
-      <option value="openai-api">OpenAI — clé API</option>
-    </select>
-    <div class="hint" id="cliStatus"></div>
-
-    <div data-show="codex-cli">
-      <label>Modèle (vide = celui par défaut de Codex)</label>
-      <input type="text" id="codexModel" placeholder="par défaut">
-      <label>Effort de réflexion</label>
-      <select id="codexEffort">
-        <option value="minimal">Minimal (le plus rapide)</option>
-        <option value="low">Bas</option>
-        <option value="medium">Moyen</option>
-      </select>
-      <div class="hint">Connexion : lance <code>codex login</code> une fois dans un terminal.</div>
+<div class="layout">
+  <nav>
+    <div class="who">
+      <div class="hex"><div class="slot"><div id="who"></div></div></div>
+      <div><div id="whoName">KIN<em>.</em></div><div id="whoTag">slime d'ombre</div></div>
     </div>
+    <button type="button" data-tab="perso" class="on"><i>01</i>Personnage</button>
+    <button type="button" data-tab="ia"><i>02</i>Intelligence</button>
+    <button type="button" data-tab="voix"><i>03</i>Voix</button>
+    <button type="button" data-tab="vision"><i>04</i>Vision</button>
+    <button type="button" data-tab="overlay"><i>05</i>Overlay</button>
+    <button type="button" data-tab="keys"><i>06</i>Raccourcis</button>
+    <button type="button" data-tab="jeux"><i>07</i>Jeux</button>
+  </nav>
 
-    <div data-show="claude-cli">
-      <label>Modèle</label>
-      <select id="claudeCliModel">
-        <option value="opus">Opus (le plus capable)</option>
-        <option value="sonnet">Sonnet (plus rapide)</option>
-        <option value="haiku">Haiku (très rapide)</option>
-      </select>
-      <div class="hint">Connexion : lance <code>claude</code> dans un terminal puis <code>/login</code>. Consomme les crédits « Agent SDK » de ton abonnement.</div>
-    </div>
+  <main>
+    <!-- Personnage -->
+    <section class="panel on" data-panel="perso">
+      <h1>Personnage<em>.</em></h1>
+      <p class="lead">Chaque mascotte a son caractère : le ton des réponses écrites et la voix changent avec elle. Les faits, eux, restent les mêmes.</p>
+      <div class="group">
+        <h2>Choix</h2>
+        <input type="hidden" id="mascot">
+        <div id="mascotPicker" style="margin-top:10px"></div>
+      </div>
+      <div class="group">
+        <h2>Langue</h2>
+        <label>Langue des réponses</label>
+        <select id="language">
+          <option value="auto">Automatique (celle de ta question)</option>
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+          <option value="es">Español</option>
+          <option value="it">Italiano</option>
+          <option value="pt">Português</option>
+        </select>
+      </div>
+    </section>
 
-    <div data-show="anthropic-api">
-      <label>Modèle Claude</label>
-      <select id="anthropicModel">
-        <option value="claude-opus-5-5">Claude Opus 5.5 (le plus capable)</option>
-        <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (plus rapide, moins cher)</option>
-        <option value="claude-haiku-5-5">Claude Haiku 5.5 (très rapide, très bon marché)</option>
-      </select>
-      <label>Effort de réflexion</label>
-      <select id="effort">
-        <option value="low">Bas (réponses rapides)</option>
-        <option value="medium">Moyen</option>
-        <option value="high">Élevé (plus lent)</option>
-      </select>
-    </div>
+    <!-- IA -->
+    <section class="panel" data-panel="ia">
+      <h1>Intelligence<em>.</em></h1>
+      <p class="lead">Le moteur qui répond à tes questions.</p>
+      <div class="group">
+        <h2>Moteur</h2>
+        <label>Moteur des réponses</label>
+        <select id="provider">
+          <option value="codex-cli">ChatGPT — abonnement (via Codex)</option>
+          <option value="claude-cli">Claude — abonnement Pro/Max (via Claude Code)</option>
+          <option value="anthropic-api">Claude — clé API</option>
+          <option value="openai-api">OpenAI — clé API</option>
+        </select>
+        <div class="status" id="cliStatus"></div>
 
-    <div data-show="openai-api">
-      <label>Modèle OpenAI</label>
-      <input type="text" id="openaiModel" placeholder="gpt-5-mini">
-    </div>
+        <div data-show="codex-cli">
+          <div class="two">
+            <div><label>Modèle</label><input type="text" id="codexModel" placeholder="par défaut"></div>
+            <div><label>Effort de réflexion</label>
+              <select id="codexEffort">
+                <option value="minimal">Minimal (le plus rapide)</option>
+                <option value="low">Bas</option>
+                <option value="medium">Moyen</option>
+              </select></div>
+          </div>
+          <div class="hint">Connexion : lance <code>codex login</code> une fois dans un terminal. Modèle vide = celui par défaut de Codex.</div>
+        </div>
 
-    <div class="check"><input type="checkbox" id="webSearch"><span>Recherche web (patchs, builds, méta à jour)</span></div>
-  </section>
+        <div data-show="claude-cli">
+          <label>Modèle</label>
+          <select id="claudeCliModel">
+            <option value="opus">Opus (le plus capable)</option>
+            <option value="sonnet">Sonnet (plus rapide)</option>
+            <option value="haiku">Haiku (très rapide)</option>
+          </select>
+          <div class="hint">Connexion : lance <code>claude</code> dans un terminal puis <code>/login</code>. Consomme les crédits « Agent SDK » de ton abonnement.</div>
+        </div>
 
-  <section>
-    <h2>Clés API (optionnel)</h2>
-    <label>Clé Anthropic</label>
-    <input type="password" id="anthropicKey" placeholder="sk-ant-...">
-    <label>Clé OpenAI</label>
-    <input type="password" id="openaiKey" placeholder="sk-...">
-    <div class="hint">Inutiles avec les abonnements. La clé OpenAI permet aussi la transcription et les voix OpenAI. Chiffrées localement.</div>
-  </section>
+        <div data-show="anthropic-api">
+          <div class="two">
+            <div><label>Modèle Claude</label>
+              <select id="anthropicModel">
+                <option value="claude-opus-5-5">Claude Opus 5.5 (le plus capable)</option>
+                <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (plus rapide)</option>
+                <option value="claude-haiku-5-5">Claude Haiku 5.5 (très rapide)</option>
+              </select></div>
+            <div><label>Effort de réflexion</label>
+              <select id="effort">
+                <option value="low">Bas (réponses rapides)</option>
+                <option value="medium">Moyen</option>
+                <option value="high">Élevé (plus lent)</option>
+              </select></div>
+          </div>
+        </div>
 
-  <section>
-    <h2>Vision</h2>
-    <div class="check"><input type="checkbox" id="useVision"><span>Joindre une capture de la fenêtre à chaque question</span></div>
-    <label>Fenêtre observée</label>
-    <div class="row">
-      <select id="target"></select>
-      <button class="ghost" id="refresh" type="button">↻</button>
-    </div>
-    <div class="hint">Lance ton jeu en mode « fenêtré sans bordure » pour que l'overlay s'affiche par-dessus.</div>
-  </section>
+        <div data-show="openai-api">
+          <label>Modèle OpenAI</label>
+          <input type="text" id="openaiModel" placeholder="gpt-5-mini">
+        </div>
 
-  <section>
-    <h2>Personnalité &amp; voix</h2>
-    <label>Personnalité</label>
-    <select id="personality"></select>
-    <label>Mascotte</label>
-    <div id="mascotPicker"></div>
-    <input type="hidden" id="mascot">
-    <label>Langue des réponses</label>
-    <select id="language">
-      <option value="auto">Automatique</option>
-      <option value="fr">Français</option>
-      <option value="en">English</option>
-      <option value="de">Deutsch</option>
-      <option value="es">Español</option>
-      <option value="it">Italiano</option>
-      <option value="pt">Português</option>
-    </select>
-  </section>
+        <label class="check"><input type="checkbox" id="webSearch"><span>Recherche web pour les infos à jour (patchs, builds, méta)</span></label>
+      </div>
 
-  <section>
-    <h2>Voix</h2>
-    <label>Reconnaissance vocale</label>
-    <select id="sttEngine">
-      <option value="local">Whisper local (gratuit, hors ligne)</option>
-      <option value="openai">OpenAI (clé API)</option>
-    </select>
-    <div data-stt="local">
-      <label>Modèle Whisper</label>
-      <select id="whisperModel">
-        <option value="onnx-community/whisper-base">Base — rapide (~1,5 s), précision moyenne</option>
-        <option value="onnx-community/whisper-small">Small — précis (~4 s) · recommandé</option>
-        <option value="onnx-community/whisper-large-v3-turbo">Large v3 Turbo — très précis, lent sur CPU</option>
-      </select>
-      <label>Calcul</label>
-      <select id="whisperDevice">
-        <option value="cpu">Processeur (CPU)</option>
-        <option value="dml">Carte graphique (DirectML)</option>
-      </select>
-      <div class="hint">Le modèle est téléchargé une seule fois (≈ 145 Mo à 1 Go) puis tout reste sur ta machine.</div>
-    </div>
+      <div class="group">
+        <h2>Clés API (optionnel)</h2>
+        <div class="two">
+          <div><label>Clé Anthropic</label><input type="password" id="anthropicKey" placeholder="sk-ant-..."></div>
+          <div><label>Clé OpenAI</label><input type="password" id="openaiKey" placeholder="sk-..."></div>
+        </div>
+        <div class="hint">Inutiles avec les abonnements. La clé OpenAI permet aussi la transcription et les voix OpenAI. Chiffrées localement.</div>
+      </div>
+    </section>
 
-    <div class="check"><input type="checkbox" id="voiceEnabled"><span>Lire les réponses à voix haute</span></div>
-    <label>Synthèse vocale</label>
-    <select id="ttsEngine">
-      <option value="piper">Voix neuronales locales, une par personnalité (gratuit, hors ligne)</option>
-      <option value="system">Voix Windows (gratuit, robotique)</option>
-      <option value="openai">OpenAI (clé API, la plus naturelle)</option>
-    </select>
-    <div data-tts="system">
-      <label>Voix Windows</label>
-      <select id="systemVoice"></select>
-    </div>
-    <div data-tts="openai">
-      <label>Voix OpenAI</label>
-      <select id="ttsVoice">
-        <option value="auto">Selon la personnalité</option>
-        <option>alloy</option><option>ash</option><option>ballad</option><option>coral</option><option>echo</option>
-        <option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option>
-      </select>
-    </div>
-    <label>Masquer l'overlay après (secondes, 0 = jamais)</label>
-    <input type="number" id="autoHideSeconds" min="0" max="600">
-  </section>
+    <!-- Voix -->
+    <section class="panel" data-panel="voix">
+      <h1>Voix<em>.</em></h1>
+      <p class="lead">Ce que GameHelper entend et comment il te répond à l'oral.</p>
+      <div class="group">
+        <h2>Reconnaissance vocale</h2>
+        <label>Moteur</label>
+        <select id="sttEngine">
+          <option value="local">Whisper local (gratuit, hors ligne)</option>
+          <option value="openai">OpenAI (clé API)</option>
+        </select>
+        <div data-stt="local">
+          <div class="two">
+            <div><label>Modèle Whisper</label>
+              <select id="whisperModel">
+                <option value="onnx-community/whisper-base">Base — rapide (~1,5 s)</option>
+                <option value="onnx-community/whisper-small">Small — précis (~4 s) · recommandé</option>
+                <option value="onnx-community/whisper-large-v3-turbo">Large v3 Turbo — très précis, lent</option>
+              </select></div>
+            <div><label>Calcul</label>
+              <select id="whisperDevice">
+                <option value="cpu">Processeur (CPU)</option>
+                <option value="dml">Carte graphique (DirectML)</option>
+              </select></div>
+          </div>
+          <div class="hint">Le modèle est téléchargé une seule fois (≈ 145 Mo à 1 Go) puis tout reste sur ta machine.</div>
+        </div>
+      </div>
 
-  <section>
-    <h2>Jeux</h2>
-    <div class="hint">GameHelper reconnaît Deadlock et Diablo IV automatiquement. Deadlock : statistiques en direct (méta, counters, objets) via deadlock-api.com. Diablo IV : recherche orientée vers Maxroll, D4Builds et les notes de patch, avec sources citées.</div>
-    <label>Deadlock : ton identifiant Steam (facultatif, pour « analyse mes dernières parties »)</label>
-    <input type="text" id="deadlockAccountId" placeholder="SteamID64 (7656119…) ou ID de compte">
-    <div class="hint">Visible sur ton profil Steam ou sur statlocker.gg. Ton historique doit être public dans Deadlock.</div>
+      <div class="group">
+        <h2>Synthèse vocale</h2>
+        <label class="check"><input type="checkbox" id="voiceEnabled"><span>Lire les réponses à voix haute</span></label>
+        <label>Moteur</label>
+        <select id="ttsEngine">
+          <option value="piper">Voix neuronales locales, une par personnage (gratuit, hors ligne)</option>
+          <option value="system">Voix Windows (gratuit, robotique)</option>
+          <option value="openai">OpenAI (clé API, la plus naturelle)</option>
+        </select>
+        <div data-tts="system">
+          <label>Voix Windows</label>
+          <select id="systemVoice"></select>
+        </div>
+        <div data-tts="openai">
+          <label>Voix OpenAI</label>
+          <select id="ttsVoice">
+            <option value="auto">Selon le personnage</option>
+            <option>alloy</option><option>ash</option><option>ballad</option><option>coral</option><option>echo</option>
+            <option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option>
+          </select>
+        </div>
+      </div>
+    </section>
 
-    <h2 style="margin-top:18px">Diablo IV</h2>
-    <div class="hint">Builds (Mobalytics, Maxroll, D4Builds ou le tien), priorités, équipement et scan ont leur propre fenêtre.</div>
-    <button type="button" class="ghost small" id="openD4" style="margin-top:8px">Ouvrir le panneau Diablo IV</button>
-  </section>
+    <!-- Vision -->
+    <section class="panel" data-panel="vision">
+      <h1>Vision<em>.</em></h1>
+      <p class="lead">La fenêtre que GameHelper regarde quand tu poses une question. L'overlay n'apparaît jamais sur la capture.</p>
+      <div class="group">
+        <h2>Capture</h2>
+        <label class="check"><input type="checkbox" id="useVision"><span>Joindre une capture de la fenêtre à chaque question</span></label>
+        <label>Fenêtre observée</label>
+        <div class="row">
+          <select id="target"></select>
+          <button class="ghost" id="refresh" type="button" title="Actualiser la liste">↻</button>
+        </div>
+        <div class="hint">Lance ton jeu en mode « fenêtré sans bordure » pour que l'overlay s'affiche par-dessus.</div>
+      </div>
+    </section>
 
-  <section>
-    <h2>Overlay</h2>
-    <label>Taille : <span id="overlayScaleVal"></span></label>
-    <input type="range" id="overlayScale" min="0.8" max="1.4" step="0.05">
-    <label>Opacité du fond : <span id="overlayOpacityVal"></span></label>
-    <input type="range" id="overlayOpacity" min="0.3" max="1" step="0.05">
-    <div class="check"><input type="checkbox" id="overlayCompact"><span>Mode compact : la mascotte et la dernière réponse sur deux lignes</span></div>
-    <div class="hint">Pour déplacer l'overlay, tire son en-tête (la mascotte). Sa position est mémorisée.</div>
-  </section>
+    <!-- Overlay -->
+    <section class="panel" data-panel="overlay">
+      <h1>Overlay<em>.</em></h1>
+      <p class="lead">L'apparence de la fenêtre affichée par-dessus le jeu. Pour la déplacer, tire son en-tête : sa position est mémorisée.</p>
+      <div class="group">
+        <h2>Apparence</h2>
+        <div class="two">
+          <div><label>Taille <span class="val" id="overlayScaleVal"></span></label>
+            <input type="range" id="overlayScale" min="0.8" max="1.4" step="0.05"></div>
+          <div><label>Opacité du fond <span class="val" id="overlayOpacityVal"></span></label>
+            <input type="range" id="overlayOpacity" min="0.3" max="1" step="0.05"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="overlayCompact"><span>Mode compact : la mascotte et la dernière réponse sur deux lignes</span></label>
+      </div>
+      <div class="group">
+        <h2>Comportement</h2>
+        <label>Masquer l'overlay après (secondes, 0 = jamais)</label>
+        <input type="number" id="autoHideSeconds" min="0" max="600" style="max-width:160px">
+      </div>
+    </section>
 
-  <section>
-    <h2>Raccourcis</h2>
-    <div id="hotkeys"></div>
-  </section>
+    <!-- Raccourcis -->
+    <section class="panel" data-panel="keys">
+      <h1>Raccourcis<em>.</em></h1>
+      <p class="lead">Ils marchent partout, même quand le jeu a le focus.</p>
+      <div class="group">
+        <h2>Actions</h2>
+        <div id="hotkeys"></div>
+      </div>
+    </section>
 
-  <div class="row"><button id="save" type="button">Enregistrer</button><span id="saved">Enregistré ✓</span></div>
-</main>
+    <!-- Jeux -->
+    <section class="panel" data-panel="jeux">
+      <h1>Jeux<em>.</em></h1>
+      <p class="lead">GameHelper reconnaît Deadlock et Diablo IV automatiquement.</p>
+      <div class="group">
+        <h2>Deadlock</h2>
+        <div class="hint" style="margin-top:0">Statistiques en direct (méta, counters, objets) via deadlock-api.com.</div>
+        <label>Identifiant Steam (facultatif)</label>
+        <input type="text" id="deadlockAccountId" placeholder="SteamID64 (7656119…) ou ID de compte">
+        <div class="hint">Pour « analyse mes dernières parties ». Visible sur ton profil Steam ou sur statlocker.gg ; ton historique doit être public dans Deadlock.</div>
+      </div>
+      <div class="group">
+        <h2>Diablo IV</h2>
+        <div class="hint" style="margin-top:0">Recherche orientée vers Maxroll, D4Builds et les notes de patch, avec sources citées. Builds (Mobalytics, Maxroll, D4Builds ou le tien), priorités, équipement et scan ont leur propre fenêtre.</div>
+        <button type="button" class="ghost" id="openD4" style="margin-top:12px">Ouvrir le panneau Diablo IV</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="bottom"><span id="saved">ENREGISTRÉ ✓</span><button id="save" type="button">Enregistrer</button></div>
+
 <script src="ui/mascots.js"></script>
 <script src="ui/hotkeys-ui.js"></script>
 <script src="settings.js"></script>

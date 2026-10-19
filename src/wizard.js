@@ -293,7 +293,7 @@ function loadVoices() {
 }
 speechSynthesis.onvoiceschanged = loadVoices;
 
-$("ttsVoice").innerHTML = ['<option value="auto">Selon la personnalité</option>', ...OPENAI_VOICES.map((v) => `<option>${v}</option>`)].join("");
+$("ttsVoice").innerHTML = ['<option value="auto">Selon le personnage</option>', ...OPENAI_VOICES.map((v) => `<option>${v}</option>`)].join("");
 $("ttsEngine").onchange = () => {
   const engine = $("ttsEngine").value;
   $("systemVoice").style.display = engine === "system" ? "" : "none";
@@ -305,7 +305,7 @@ $("ttsTest").onclick = async () => {
   readForm();
   const text = "Salut ! Je suis prêt à t'aider pendant tes parties.";
   if (cfg.ttsEngine === "piper") {
-    return playSample(cfg.personality, personalitiesInfo[cfg.personality], $("ttsTest"));
+    return playSample(cfg.mascot, personalitiesInfo[cfg.mascot], $("ttsTest"));
   }
   if (cfg.ttsEngine === "openai") {
     const r = await window.api.invoke("setup:tts-test", { text, voice: cfg.ttsVoice === "auto" ? "alloy" : cfg.ttsVoice, openaiKey: cfg.openaiKey });
@@ -322,38 +322,6 @@ $("ttsTest").onclick = async () => {
 
 // ---------- 3. Jeu ----------
 
-const SAMPLES = {
-  kin: "On garde la deuxième option : elle sécurise ton build maintenant, on optimisera ensuite.",
-  axiom: "Deux options. La seconde offre douze pour cent de dégâts en plus sur ta compétence principale. Choix rationnel : la seconde.",
-  razor: "La deuxième. Prends-la. Avance.",
-  gremlin: "Sérieux, tu hésites encore ? La deuxième, évidemment. La première, c'est pour les touristes.",
-  zenith: "Respire. La seconde option est la plus stable. Prends ton temps.",
-};
-
-// Cartes de personnalité avec extrait de voix.
-function renderPersos(personalities) {
-  const box = $("persos");
-  box.innerHTML = "";
-  for (const [id, p] of Object.entries(personalities)) {
-    const el = document.createElement("div");
-    el.className = "perso" + (cfg.personality === id ? " selected" : "");
-    el.innerHTML = `<div class="pname"></div><div class="ptag"></div><button class="ghost small">▶ Voix</button>`;
-    el.querySelector(".pname").textContent = p.name;
-    el.querySelector(".ptag").textContent = p.tagline;
-    el.onclick = () => {
-      cfg.personality = id;
-      $("personality").value = id;
-      personalitiesInfo = personalities;
-  renderPersos(personalities);
-    };
-    el.querySelector("button").onclick = (e) => {
-      e.stopPropagation();
-      playSample(id, personalities[id], e.currentTarget);
-    };
-    box.appendChild(el);
-  }
-}
-
 async function playSample(id, perso, btn) {
   const openaiVoice = perso.voice;
   readForm();
@@ -364,7 +332,7 @@ async function playSample(id, perso, btn) {
       btn.disabled = true;
       btn.textContent = "…";
     }
-    const r = await window.api.invoke("setup:voice-sample", { personality: id, language: cfg.language, text: SAMPLES[id] });
+    const r = await window.api.invoke("setup:voice-sample", { mascot: id, language: cfg.language, text: perso.sample });
     sampleBtn = null;
     if (btn) {
       btn.disabled = false;
@@ -380,11 +348,11 @@ async function playSample(id, perso, btn) {
     return;
   }
   if (cfg.ttsEngine === "openai" && cfg.openaiKey) {
-    const r = await window.api.invoke("setup:tts-test", { text: SAMPLES[id], voice: openaiVoice || "alloy", openaiKey: cfg.openaiKey });
+    const r = await window.api.invoke("setup:tts-test", { text: perso.sample, voice: openaiVoice || "alloy", openaiKey: cfg.openaiKey });
     if (r.ok) return new Audio(URL.createObjectURL(new Blob([r.mp3], { type: "audio/mpeg" }))).play();
   }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(SAMPLES[id]);
+  const u = new SpeechSynthesisUtterance(perso.sample);
   u.pitch = perso.systemVoice?.pitch ?? 1;
   u.rate = perso.systemVoice?.rate ?? 1;
   const v = speechSynthesis.getVoices().find((x) => x.name === cfg.systemVoice) || speechSynthesis.getVoices().find((x) => x.lang.startsWith("fr"));
@@ -407,7 +375,7 @@ $("refreshTarget").onclick = loadSources;
 
 // ---------- Formulaire ----------
 
-const FIELDS = ["ttsEngine", "systemVoice", "ttsVoice", "personality", "mascot", "language"];
+const FIELDS = ["ttsEngine", "systemVoice", "ttsVoice", "mascot", "language"];
 const CHECKS = ["voiceEnabled", "useVision", "webSearch"];
 
 function readForm() {
@@ -424,10 +392,9 @@ function renderSummary() {
   const rows = [
     ["IA", names[cfg.provider] + (providerReady(cfg.provider) ? " ✓" : " — non testé")],
     ["Reconnaissance vocale", `Whisper ${model?.name} en local` + (detected?.whisper?.[cfg.whisperModel] ? " ✓" : " — sera téléchargé au premier usage")],
-    ["Voix", cfg.voiceEnabled ? { piper: "voix neuronale locale de la personnalité", openai: "OpenAI", system: "Windows" }[cfg.ttsEngine] : "désactivée"],
+    ["Voix", cfg.voiceEnabled ? { piper: "voix neuronale locale du personnage", openai: "OpenAI", system: "Windows" }[cfg.ttsEngine] : "désactivée"],
     ["Fenêtre observée", cfg.target?.name || "Écran entier"],
-    ["Personnalité", $("personality").selectedOptions[0]?.textContent],
-    ["Mascotte", window.Mascots.META[cfg.mascot]?.name],
+    ["Personnage", personalitiesInfo[cfg.mascot] && `${personalitiesInfo[cfg.mascot].name} — ${personalitiesInfo[cfg.mascot].tagline}`],
   ];
   $("summary").innerHTML = rows.map(([k, v]) => `<div><b>${k} :</b> ${escapeHtml(v || "")}</div>`).join("");
 }
@@ -437,14 +404,14 @@ function renderSummary() {
 (async () => {
   const { settings, personalities } = await window.api.invoke("settings:get");
   cfg = { ...settings };
-  for (const [id, p] of Object.entries(personalities)) $("personality").add(new Option(`${p.name} — ${p.tagline}`, id));
   personalitiesInfo = personalities;
-  renderPersos(personalities);
   loadVoices();
   for (const f of FIELDS) $(f).value = cfg[f] ?? "";
-  $("personality").value = cfg.personality;
   for (const c of CHECKS) $(c).checked = !!cfg[c];
-  window.Mascots.picker($("mascotPicker"), cfg.mascot, (id) => ($("mascot").value = cfg.mascot = id));
+  window.Mascots.picker($("mascotPicker"), cfg.mascot, (id) => ($("mascot").value = cfg.mascot = id), {
+    personas: personalities,
+    onVoice: (id, btn) => playSample(id, personalities[id], btn),
+  });
   $("ttsEngine").onchange();
   showStep(0);
   hotkeyEditor = await window.HotkeysUI.mount($("hotkeys"));

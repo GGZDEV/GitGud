@@ -17,7 +17,7 @@ const STATUS = {
 };
 const PENDING = { thinking: "scan en cours", transcribing: "transcription" };
 
-let config = { personality: "kin", mascot: "slime", autoHideSeconds: 20, context: "" };
+let config = { mascot: "slime", autoHideSeconds: 20, context: "" };
 let state = "idle";
 let current = null; // bulle de réponse en cours
 let recorder = null;
@@ -290,7 +290,7 @@ window.api.on("tts-audio", ({ data, type, pitch }) => {
   stopAudio();
   audio = new Audio(URL.createObjectURL(new Blob([data], { type })));
   if (pitch && pitch !== 1) {
-    audio.preservesPitch = false; // voix plus aiguë (GREMLIN)
+    audio.preservesPitch = false; // voix plus aiguë ou plus grave selon le personnage
     audio.playbackRate = pitch;
   }
   audio.onended = () => {
