@@ -37,6 +37,7 @@ const DEFAULTS = {
   overlayCompact: false, // mascotte + une ligne
   deadlockAccountId: "", // facultatif : historique de parties Deadlock
   d4ItemCard: true, // Diablo IV : fiche ✓ / ✗ à chaque objet survolé
+  d4Hints: true, // Diablo IV : pastille ✓ / ✗ au survol des compétences et du Parangon
   anthropicKey: "",
   openaiKey: "",
 };

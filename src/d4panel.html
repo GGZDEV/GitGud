@@ -52,6 +52,18 @@
   .v-meh { background: rgba(245,158,11,.15); color: #fbbf24; } .v-bad { background: rgba(239,68,68,.15); color: #f87171; } .v-neutral { background: rgba(148,163,184,.12); color: var(--muted); }
   .ok { color: var(--ok); } .ko { color: var(--ko); } .muted { color: var(--muted); }
   ul.check { list-style: none; padding: 0; margin: 0; } ul.check li { padding: 3px 0; }
+  .chars { display: flex; gap: 8px; flex-wrap: wrap; }
+  .char { min-width: 170px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #0d0b10; cursor: pointer; position: relative; }
+  .char.active { border-color: var(--accent2); background: var(--card2); }
+  .char .cn { font-weight: 700; color: #f4d9a8; }
+  .char .cb { font-size: 12px; color: var(--muted); }
+  .char .tools { position: absolute; top: 4px; right: 4px; display: none; }
+  .char:hover .tools { display: flex; }
+  .plan { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .skill { padding: 8px 0; border-bottom: 1px dashed #2a2431; }
+  .skill b { color: #f4d9a8; } .skill .r { float: right; color: var(--accent2); font-size: 12px; }
+  .mods { font-size: 12.5px; color: var(--muted); margin-top: 2px; } .mods .big { color: var(--fg); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 </style>
 </head>
 <body>
@@ -61,7 +73,8 @@
   <span class="status off" id="status">Jeu : …</span>
 </header>
 <nav>
-  <button data-tab="builds" class="on">Builds</button>
+  <button data-tab="builds" class="on">Personnages &amp; builds</button>
+  <button data-tab="plan">Compétences &amp; Parangon</button>
   <button data-tab="prio">Priorités</button>
   <button data-tab="equip">Équipement</button>
   <button data-tab="conn">Connexion &amp; scan</button>
@@ -69,12 +82,22 @@
 <main>
   <section class="tab on" id="tab-builds">
     <div class="card">
+      <h2>Personnages</h2>
+      <div class="chars" id="chars"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="charName" placeholder="Nom d'un nouveau personnage (ex. le reroll)">
+        <button class="ghost" id="addChar">Ajouter</button>
+      </div>
+      <div class="hint">Chaque personnage garde son build, son équipement et son dernier scan. Dans le jeu, ouvre ta fiche de personnage (C) : GameHelper reconnaît le nom et bascule tout seul (ou crée le personnage).</div>
+    </div>
+    <div class="card">
       <h2>Importer un build</h2>
       <div class="row"><input type="text" id="url" placeholder="Lien Mobalytics, Maxroll (planificateur ou guide) ou D4Builds"><button class="btn" id="import">Importer</button></div>
       <div class="hint" id="importInfo">Le même lien importé à nouveau met à jour le build existant (tes modifications sur ce build sont alors remplacées).</div>
     </div>
     <div class="card">
-      <h2>Mes builds</h2>
+      <h2>Builds</h2>
+      <div class="hint" style="margin:-6px 0 10px" id="buildsHint"></div>
       <div id="builds"></div>
       <div class="row" style="margin-top:10px">
         <input type="text" id="newName" placeholder="Nom d'un build à créer soi-même">
@@ -86,6 +109,11 @@
       <select id="variant"></select>
       <div class="hint">La fiche d'objet, le scan et l'IA comparent tes objets à cette variante.</div>
     </div>
+  </section>
+
+  <section class="tab" id="tab-plan">
+    <div class="hint" style="margin:-4px 0 12px">Ce que vise le build pour la variante suivie. Dans le jeu, survole une compétence, un modificateur, un nœud ou une châsse de Parangon : une pastille ✓ / ✗ s'affiche à côté du curseur.</div>
+    <div id="planBody"></div>
   </section>
 
   <section class="tab" id="tab-prio">
@@ -121,6 +149,7 @@
     <div class="card">
       <h2>Fiche d'objet et scan</h2>
       <label class="row"><input type="checkbox" id="card"> Afficher la fiche d'objet (✓ / ✗ par affixe) à chaque survol</label>
+      <label class="row" style="margin-top:6px"><input type="checkbox" id="hints"> Pastille ✓ / ✗ au survol des compétences et du Parangon</label>
       <div class="row" style="margin-top:10px"><button class="ghost" id="calib">Calibrer l'inventaire</button><span class="hint" id="calibInfo"></span></div>
       <div class="hint" id="scanInfo"></div>
     </div>

@@ -1,5 +1,6 @@
-// Module Diablo IV : build importé, équipement porté, calibrage de l'inventaire, scan
-// automatique, évaluation de chaque objet survolé. État conservé dans userData/d4/state.json.
+// Module Diablo IV : personnages (chacun avec son build, son équipement et son dernier scan),
+// builds importés, calibrage de l'inventaire, scan automatique, évaluation de chaque objet
+// survolé, verdict au survol des compétences et du Parangon. État : userData/d4/state.json.
 const fs = require("fs");
 const path = require("path");
 const { EventEmitter } = require("events");
@@ -9,6 +10,7 @@ const { AffixMatcher } = require("./affixes");
 const { parseItem } = require("./item");
 const { evaluate } = require("./evaluate");
 const { importBuild, refreshBuildKeys, emptyBuild } = require("./build-import");
+const { parseTooltip, judge, classOfSkill } = require("./planner");
 
 const INV_COLS = 11;
 const INV_ROWS = 3;
@@ -19,7 +21,7 @@ class D4Manager extends EventEmitter {
     super();
     this.file = path.join(dataDir, "d4", "state.json");
     this.dataDir = dataDir;
-    this.state = { builds: [], activeBuildId: null, equipped: {}, positions: { inventory: null, equip: {} }, inventory: [], lastItem: null };
+    this.state = { builds: [], characters: [], activeCharacterId: null, positions: { inventory: null, equip: {} }, lastItem: null };
     try {
       Object.assign(this.state, JSON.parse(fs.readFileSync(this.file, "utf8")));
     } catch {}
@@ -30,6 +32,17 @@ class D4Manager extends EventEmitter {
       delete this.state.build;
       delete this.state.variantId;
     }
+    // Avant les personnages : build actif, équipement et scan deviennent ceux d'un premier personnage
+    if (!this.state.characters?.length) {
+      const first = this.state.builds.find((b) => b.id === this.state.activeBuildId) || this.state.builds[0];
+      this.state.characters = [
+        { id: "c1", name: null, className: first?.className || null, buildId: first?.id || null, equipped: this.state.equipped || {}, inventory: this.state.inventory || [] },
+      ];
+      this.state.activeCharacterId = "c1";
+    }
+    delete this.state.equipped;
+    delete this.state.inventory;
+    delete this.state.activeBuildId;
     this.matcher = null;
     this.mode = null; // null | "sync" | { calibrate: [...] } | "scan"
     this.scanTarget = null;
@@ -48,10 +61,32 @@ class D4Manager extends EventEmitter {
       this.matcher = new AffixMatcher(await getDict(this.dataDir));
       // Builds importés avec une version précédente : familles d'affixes à jour, puis réévaluation
       for (const b of this.state.builds) refreshBuildKeys(b, this.matcher);
-      for (const it of Object.values(this.state.equipped)) this.reparse(it);
+      for (const c of this.state.characters) {
+        for (const [slot, it] of Object.entries(c.equipped)) {
+          // Infobulles de compétence / Parangon prises pour des objets par les versions précédentes
+          if (/^(RANG|RANK|NIVEAU|LEVEL)\s+\d+|^MODIFICATEURS$|^GLYPHE/i.test(it.name || "")) delete c.equipped[slot];
+          else this.reparse(it);
+        }
+      }
       this.reevaluate();
+      this.refreshPlans();
     }
     return this.matcher;
+  }
+
+  // Builds Mobalytics importés avant le verdict compétences / Parangon : on récupère leur plan
+  // (sans toucher aux priorités modifiées dans le panneau).
+  async refreshPlans() {
+    for (const b of this.state.builds.filter((x) => x.source === "mobalytics" && x.url && !x.variants.some((v) => v.plan))) {
+      try {
+        const fresh = await importBuild(b.url, this.matcher, this.matcher.dict);
+        for (const v of b.variants) v.plan = fresh.variants.find((f) => f.id === v.id)?.plan || null;
+        this.save();
+        this.emit("plans");
+      } catch (e) {
+        console.warn("D4 plan :", e.message);
+      }
+    }
   }
 
   start() {
@@ -59,10 +94,79 @@ class D4Manager extends EventEmitter {
     this.ready().catch((e) => console.warn("D4 dictionnaire :", e.message));
   }
 
-  // ---------- Builds : plusieurs builds enregistrés, un actif ----------
+  // ---------- Personnages : chacun suit un build et garde son équipement ----------
+
+  get char() {
+    return this.state.characters.find((c) => c.id === this.state.activeCharacterId) || this.state.characters[0];
+  }
+
+  get equipped() {
+    return this.char.equipped;
+  }
+
+  charLabel(c = this.char) {
+    return c.name || c.className || "Personnage";
+  }
+
+  addCharacter({ name, className } = {}) {
+    const c = { id: `c${Date.now()}`, name: name?.trim() || null, className: className || null, buildId: null, equipped: {}, inventory: [] };
+    this.state.characters.push(c);
+    this.state.activeCharacterId = c.id;
+    this.reevaluate();
+    this.save();
+    return this.summary();
+  }
+
+  setActiveCharacter(id) {
+    if (this.state.characters.some((c) => c.id === id)) this.state.activeCharacterId = id;
+    this.reevaluate();
+    this.save();
+    return this.summary();
+  }
+
+  updateCharacter(id, patch) {
+    const c = this.state.characters.find((x) => x.id === id);
+    if (c) {
+      if (patch.name !== undefined) c.name = patch.name.trim() || null;
+      if (patch.className !== undefined) c.className = patch.className || null;
+    }
+    this.save();
+    return this.summary();
+  }
+
+  deleteCharacter(id) {
+    if (this.state.characters.length <= 1) return this.summary();
+    this.state.characters = this.state.characters.filter((c) => c.id !== id);
+    if (this.state.activeCharacterId === id) this.state.activeCharacterId = this.state.characters[0].id;
+    this.reevaluate();
+    this.save();
+    return this.summary();
+  }
+
+  // Fiche de personnage ouverte dans le jeu : bascule sur ce personnage (ou le crée)
+  onCharacterSeen(name) {
+    const known = this.state.characters.find((c) => c.name && c.name.toLowerCase() === name.toLowerCase());
+    if (known) {
+      if (known.id === this.char.id) return;
+      this.state.activeCharacterId = known.id;
+      this.reevaluate();
+      this.save();
+      return this.emit("character", { kind: "switched", name: this.charLabel(), build: this.build?.name || null });
+    }
+    // Premier personnage (issu de l'ancien format) pas encore nommé : c'est lui
+    if (!this.char.name) {
+      this.char.name = name;
+      this.save();
+      return this.emit("character", { kind: "named", name, build: this.build?.name || null });
+    }
+    this.addCharacter({ name });
+    this.emit("character", { kind: "created", name });
+  }
+
+  // ---------- Builds : bibliothèque commune, un build suivi par personnage ----------
 
   get build() {
-    return this.state.builds.find((b) => b.id === this.state.activeBuildId) || this.state.builds[0] || null;
+    return this.state.builds.find((b) => b.id === this.char.buildId) || null;
   }
 
   get variant() {
@@ -78,7 +182,8 @@ class D4Manager extends EventEmitter {
     build.variantId = existing?.variantId && build.variants.some((v) => v.id === existing.variantId) ? existing.variantId : (preferred || build.variants[0]).id;
     if (existing) this.state.builds[this.state.builds.indexOf(existing)] = build;
     else this.state.builds.push(build);
-    this.state.activeBuildId = build.id;
+    this.char.buildId = build.id;
+    if (!this.char.className && build.className) this.char.className = build.className;
     this.reevaluate();
     this.save();
     return build;
@@ -96,7 +201,11 @@ class D4Manager extends EventEmitter {
   }
 
   setActiveBuild(id) {
-    if (this.state.builds.some((b) => b.id === id)) this.state.activeBuildId = id;
+    const b = this.state.builds.find((x) => x.id === id);
+    if (b) {
+      this.char.buildId = id;
+      if (!this.char.className && b.className) this.char.className = b.className;
+    }
     this.reevaluate();
     this.save();
     return this.summary();
@@ -104,7 +213,7 @@ class D4Manager extends EventEmitter {
 
   deleteBuild(id) {
     this.state.builds = this.state.builds.filter((b) => b.id !== id);
-    if (this.state.activeBuildId === id) this.state.activeBuildId = this.state.builds[0]?.id || null;
+    for (const c of this.state.characters) if (c.buildId === id) c.buildId = null;
     this.reevaluate();
     this.save();
     return this.summary();
@@ -149,7 +258,7 @@ class D4Manager extends EventEmitter {
     const rows = [];
     for (const target of v.slots.filter((s) => !/charm|seal|power|talisman/i.test(s.slot))) {
       const equippedKey = target.slot.startsWith("weapon") ? "weapon" : target.slot;
-      const item = this.state.equipped[equippedKey] || null;
+      const item = this.equipped[equippedKey] || null;
       const ev = item ? evaluate({ ...item, slot: item.slot === "ring" ? "ring" : item.slot }, { ...v, slots: [target] }, {}) : null;
       rows.push({
         slot: target.slot,
@@ -167,7 +276,7 @@ class D4Manager extends EventEmitter {
   }
 
   inventoryView() {
-    return this.state.inventory.filter((c) => c.item).map((c) => ({ row: c.row, col: c.col, name: c.item.name, slotName: c.eval?.slotName, verdict: c.eval?.verdict }));
+    return this.char.inventory.filter((c) => c.item).map((c) => ({ row: c.row, col: c.col, name: c.item.name, slotName: c.eval?.slotName, verdict: c.eval?.verdict }));
   }
 
   // Liste des caractéristiques pour l'ajout manuel d'un affixe
@@ -189,25 +298,33 @@ class D4Manager extends EventEmitter {
 
   // Réévalue l'inventaire mémorisé (changement de build ou de variante)
   reevaluate() {
-    for (const cell of this.state.inventory) cell.eval = cell.item ? evaluate(cell.item, this.variant, this.state.equipped) : null;
+    for (const cell of this.char.inventory) cell.eval = cell.item ? evaluate(cell.item, this.variant, this.equipped) : null;
   }
 
   summary() {
     const b = this.build;
     return {
       status: this.bridge.status,
-      builds: this.state.builds.map((x) => ({ id: x.id, name: x.name, className: x.className, source: x.source, url: x.url, edited: !!x.edited })),
+      characters: this.state.characters.map((c) => ({
+        id: c.id, name: c.name, label: this.charLabel(c), className: c.className, buildId: c.buildId,
+        buildName: this.state.builds.find((x) => x.id === c.buildId)?.name || null, equippedCount: Object.keys(c.equipped).length,
+      })),
+      activeCharacterId: this.char.id,
+      builds: this.state.builds.map((x) => ({ id: x.id, name: x.name, className: x.className, source: x.source, url: x.url, edited: !!x.edited, hasPlan: x.variants.some((v) => v.plan) })),
       activeBuildId: b?.id || null,
       build: b && { id: b.id, name: b.name, className: b.className, url: b.url, source: b.source, variants: b.variants.map((v) => ({ id: v.id, name: v.name })), variantId: this.variant?.id },
       variant: this.variant || null,
-      equipped: Object.fromEntries(Object.entries(this.state.equipped).map(([k, it]) => [k, it.name])),
+      equipped: Object.fromEntries(Object.entries(this.equipped).map(([k, it]) => [k, it.name])),
       calibrated: { inventory: !!this.state.positions.inventory, equip: Object.keys(this.state.positions.equip) },
     };
   }
 
   // ---------- Infobulles reçues du jeu ----------
 
-  async onTooltip({ lines, isItem, at }) {
+  async onTooltip({ lines, raw, isItem, at }) {
+    // Compétences, Parangon, fiche de personnage : reconnus avant les objets
+    const t = parseTooltip(raw || lines);
+    if (t) return this.onPlanTooltip(t);
     if (!isItem) return this.recordLive(lines, at);
     this.logTooltip(lines, at);
     const matcher = await this.ready();
@@ -230,8 +347,36 @@ class D4Manager extends EventEmitter {
     }
 
     this.state.lastItem = item;
-    const ev = evaluate(item, this.variant, this.state.equipped);
+    const ev = evaluate(item, this.variant, this.equipped);
     this.emit("item", { item, eval: ev });
+  }
+
+  // Survol d'une compétence, d'un modificateur, d'un nœud ou d'une châsse de Parangon
+  async onPlanTooltip(t) {
+    if (t.kind === "character") return this.onCharacterSeen(t.name);
+    const dict = (await this.ready()).dict;
+    if (t.kind === "skill") {
+      // Compétence d'une autre classe que celle du personnage suivi
+      const cls = classOfSkill(t.name, dict);
+      if (cls && !this.char.className) {
+        this.char.className = cls.en;
+        this.save();
+      } else if (cls && this.char.className && cls.en !== this.char.className && Date.now() - (this.mismatchAt || 0) > 60000) {
+        this.mismatchAt = Date.now();
+        this.emit("character", { kind: "mismatch", name: this.charLabel(), className: cls.fr });
+      }
+    }
+    const plan = this.variant?.plan;
+    if (!plan) {
+      if (Date.now() - (this.noPlanAt || 0) > 60000) {
+        this.noPlanAt = Date.now();
+        const sub = this.build ? "Réimporte-le depuis Mobalytics (panneau Diablo IV)" : `Associe un build à ${this.charLabel()} (panneau Diablo IV)`;
+        this.emit("hint", { level: "neutral", text: "· Compétences et Parangon inconnus", sub, cursor: this.cursorPhysical() });
+      }
+      return;
+    }
+    const verdict = judge(t, plan, dict);
+    if (verdict) this.emit("hint", { ...verdict, cursor: this.cursorPhysical() });
   }
 
   // Objet porté (sans section « propriétés perdues ») : mémorise l'objet et la position de son emplacement
@@ -246,7 +391,7 @@ class D4Manager extends EventEmitter {
         this.swapRings();
       }
     }
-    this.state.equipped[slot] = item;
+    this.equipped[slot] = item;
     this.state.positions.equip[slot] = cursor;
     this.save();
     if (!silent) this.emit("sync", { slot, item, done: this.syncedSlots() });
@@ -259,7 +404,7 @@ class D4Manager extends EventEmitter {
   }
 
   syncedSlots() {
-    return EQUIP_SLOTS.filter((s) => this.state.equipped[s]);
+    return EQUIP_SLOTS.filter((s) => this.equipped[s]);
   }
 
   isNearEquipSlot(cursor) {
@@ -338,7 +483,7 @@ class D4Manager extends EventEmitter {
         if (!this.scanTarget.item) await sleep(130); // infobulle lente : on laisse un peu plus de temps
         const item = this.scanTarget.item;
         if (target.slot) {
-          if (item) this.state.equipped[target.slot] = item;
+          if (item) this.equipped[target.slot] = item;
         } else {
           results.push({ row: target.row, col: target.col, x: target.x, y: target.y, item });
         }
@@ -350,11 +495,11 @@ class D4Manager extends EventEmitter {
       await glideTo(origin.x, origin.y).catch(() => {});
     }
     if (!this.aborted) {
-      this.state.inventory = results;
+      this.char.inventory = results;
       this.reevaluate();
       this.save();
     }
-    const evaluated = this.state.inventory.map((c) => ({ ...c, eval: c.eval }));
+    const evaluated = this.char.inventory.map((c) => ({ ...c, eval: c.eval }));
     this.emit("scan", { phase: this.aborted ? "aborted" : "done", cells: evaluated });
     return evaluated;
   }
@@ -421,17 +566,23 @@ class D4Manager extends EventEmitter {
     const v = this.variant;
     const b = this.build;
     const out = [];
+    out.push(`Personnage suivi : ${this.charLabel()}${this.char.className ? ` (${this.char.className})` : ""}`);
     if (b && v) {
       out.push(`Build visé : « ${b.name} » (${b.className || "?"}), variante ${v.name}, importé de ${b.url}`);
       for (const s of v.slots.filter((s) => s.affixes.length)) {
         out.push(`- ${s.slotName} : ${s.title}${s.titleFr ? ` (${s.titleFr})` : ""} ; affixes ${s.affixes.map((a) => (a.greater ? "★" : "") + a.label).join(", ")}${s.tempering.length ? ` ; trempes ${s.tempering.map((t) => t.label).join(", ")}` : ""}${s.gems.length ? ` ; gemmes ${s.gems.join(", ")}` : ""}`);
       }
-      if (v.skills.length) out.push(`- Compétences : ${v.skills.join(", ")}`);
+      if (v.plan?.skills.length) out.push(`- Compétences (rang visé ; modificateurs) : ${v.plan.skills.map((s) => `${s.fr} ${s.rank} (${s.mods.map((m) => m.fr).join(", ")})`).join(" ; ")}`);
+      else if (v.skills.length) out.push(`- Compétences : ${v.skills.join(", ")}`);
+      if (v.plan?.paragon.rares.length) {
+        const nodes = [...new Set([...v.plan.paragon.legendaries, ...v.plan.paragon.rares].map((n) => n.fr))];
+        out.push(`- Parangon, nœuds rares / légendaires visés : ${nodes.join(", ")} ; glyphes : ${v.plan.paragon.glyphs.map((g) => g.fr).join(", ")}`);
+      }
       if (v.paragon.length) out.push(`- Parangon : ${v.paragon.map((p) => `${p.board}${p.glyph ? ` (glyphe ${p.glyph} niv. ${p.glyphLevel})` : ""}`).join(", ")}`);
     } else {
       out.push("Aucun build importé (le joueur peut en importer un dans Paramètres → Jeux).");
     }
-    const eq = Object.entries(this.state.equipped);
+    const eq = Object.entries(this.equipped);
     if (eq.length && v) {
       out.push("\nÉquipement porté (lu dans le jeu) :");
       for (const [slot, it] of eq) {
@@ -441,10 +592,10 @@ class D4Manager extends EventEmitter {
     }
     const last = this.state.lastItem;
     if (last && /\b(ce|cet|cette|celui|celle|l'objet|item|loot|garde|prendre|equipe)/i.test(question)) {
-      const ev = evaluate(last, v, this.state.equipped);
+      const ev = evaluate(last, v, this.equipped);
       out.push(`\nDernier objet survolé : ${last.name} (${last.typeLine}, ${last.power ?? "?"}) — ${last.affixes.map((a) => a.text).join(" | ")}${last.power_text ? ` — pouvoir : ${last.power_text}` : ""}${ev ? ` → verdict local : ${ev.verdict.text}` : ""}`);
     }
-    const inv = this.state.inventory.filter((c) => c.item && c.eval && c.eval.verdict.level !== "bad");
+    const inv = this.char.inventory.filter((c) => c.item && c.eval && c.eval.verdict.level !== "bad");
     if (inv.length) out.push(`\nInventaire scanné, objets intéressants : ${inv.map((c) => `${c.item.name} (${c.eval.slotName}, ${c.eval.verdict.text})`).join(" ; ")}`);
     out.push(this.liveContext());
     return out.filter(Boolean).join("\n");

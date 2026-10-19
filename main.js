@@ -477,6 +477,25 @@ function initD4() {
     send("d4-item", payload);
   });
   d4.on("equipped", () => broadcast("d4:summary", d4.summary()));
+  d4.on("plans", () => broadcast("d4:summary", d4.summary()));
+  // Compétences / Parangon : pastille ✓ / ✗ à côté du curseur, sans IA
+  d4.on("hint", (h) => {
+    if (settings.d4Hints === false) return;
+    showHint(h);
+  });
+  // Personnage détecté dans le jeu (fiche de personnage) ou compétence d'une autre classe
+  d4.on("character", (c) => {
+    broadcast("d4:summary", d4.summary());
+    const msg = {
+      switched: `Personnage : ${c.name}${c.build ? ` — build « ${c.build} »` : " — aucun build associé"}.`,
+      named: `Personnage reconnu : ${c.name}${c.build ? ` (build « ${c.build} »)` : ""}.`,
+      created: `Nouveau personnage : ${c.name}. Associe-lui un build dans le panneau Diablo IV.`,
+      mismatch: `Ces compétences sont celles d'un ${c.className}, pas de ${c.name}. Ouvre ta fiche de personnage (C) pour changer de personnage.`,
+    }[c.kind];
+    if (!msg) return;
+    showOverlay();
+    send("notice", msg);
+  });
   d4.on("sync", (p) => {
     showOverlay();
     send("d4-sync", { ...p, slots: EQUIP_SLOTS });
@@ -530,6 +549,27 @@ function showMarkers(cells, durationMs) {
   if (!cells.length) return;
   const dip = cells.map((c) => ({ ...c, ...screen.screenToDipPoint({ x: c.x, y: c.y }) }));
   const display = screen.getDisplayNearestPoint(dip[0]);
+  ensureMarkersWin(display);
+  const payload = dip.map((c) => ({ x: c.x - display.bounds.x, y: c.y - display.bounds.y, level: c.level, label: c.label }));
+  const show = () => {
+    markersWin.webContents.send("markers", payload);
+    markersWin.showInactive();
+  };
+  if (markersWin.webContents.isLoading()) markersWin.webContents.once("did-finish-load", show);
+  else show();
+  markersOn = true;
+  clearTimeout(markersTimer);
+  markersTimer = setTimeout(hideMarkers, durationMs);
+}
+
+// La fenêtre ne reste affichée que tant qu'il y a des repères ou une pastille
+let markersOn = false;
+let hintOn = false;
+function hideMarkersWinIfIdle() {
+  if (!markersOn && !hintOn && markersWin && !markersWin.isDestroyed()) markersWin.hide();
+}
+
+function ensureMarkersWin(display) {
   if (!markersWin || markersWin.isDestroyed()) {
     markersWin = new BrowserWindow({
       ...display.bounds,
@@ -548,27 +588,47 @@ function showMarkers(cells, durationMs) {
     markersWin.loadFile(path.join(__dirname, "src", "d4-markers.html"));
   }
   markersWin.setBounds(display.bounds);
-  const payload = dip.map((c) => ({ x: c.x - display.bounds.x, y: c.y - display.bounds.y, level: c.level, label: c.label }));
+}
+
+// Pastille de verdict près du curseur (compétences, Parangon), dans la même fenêtre transparente
+let hintTimer = null;
+function showHint({ cursor, level, text, sub }) {
+  if (!cursor) return;
+  const dip = screen.screenToDipPoint(cursor);
+  const display = screen.getDisplayNearestPoint(dip);
+  ensureMarkersWin(display);
+  const payload = { x: dip.x - display.bounds.x, y: dip.y - display.bounds.y, level, text, sub };
   const show = () => {
-    markersWin.webContents.send("markers", payload);
+    markersWin.webContents.send("hint", payload);
     markersWin.showInactive();
   };
   if (markersWin.webContents.isLoading()) markersWin.webContents.once("did-finish-load", show);
   else show();
-  clearTimeout(markersTimer);
-  markersTimer = setTimeout(hideMarkers, durationMs);
+  hintOn = true;
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => {
+    hintOn = false;
+    if (markersWin && !markersWin.isDestroyed()) markersWin.webContents.send("hint", null);
+    hideMarkersWinIfIdle();
+  }, 4000);
 }
 
 // Masque les repères (sans toucher à un scan en cours)
 function hideMarkers() {
   clearTimeout(markersTimer);
-  if (markersWin && !markersWin.isDestroyed()) markersWin.hide();
+  markersOn = false;
+  if (markersWin && !markersWin.isDestroyed()) markersWin.webContents.send("markers", []);
+  hideMarkersWinIfIdle();
 }
 
 ipcMain.handle("d4:summary", () => d4?.summary());
 ipcMain.handle("d4:equipment", () => ({ equipment: d4.equipmentView(), inventory: d4.inventoryView() }));
 ipcMain.handle("d4:affix-choices", () => d4.affixChoices());
 ipcMain.handle("d4:new-build", (_e, { name, className }) => d4.newBuild(name, className));
+ipcMain.handle("d4:add-character", (_e, c) => d4.addCharacter(c));
+ipcMain.handle("d4:active-character", (_e, id) => d4.setActiveCharacter(id));
+ipcMain.handle("d4:update-character", (_e, { id, ...patch }) => d4.updateCharacter(id, patch));
+ipcMain.handle("d4:delete-character", (_e, id) => d4.deleteCharacter(id));
 ipcMain.handle("d4:active-build", (_e, id) => d4.setActiveBuild(id));
 ipcMain.handle("d4:delete-build", (_e, id) => d4.deleteBuild(id));
 ipcMain.handle("d4:rename-build", (_e, { id, name }) => d4.renameBuild(id, name));
@@ -584,7 +644,7 @@ ipcMain.handle("d4:settings", (_e, patch) => {
     settings = { ...settings, ...patch };
     store.save(settings);
   }
-  return { d4ItemCard: settings.d4ItemCard !== false, scanKey: label(hotkeys.bindings.d4scan) };
+  return { d4ItemCard: settings.d4ItemCard !== false, d4Hints: settings.d4Hints !== false, scanKey: label(hotkeys.bindings.d4scan) };
 });
 
 // Panneau Diablo IV : fenêtre dédiée (builds, priorités, équipement, connexion)

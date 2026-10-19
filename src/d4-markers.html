@@ -9,20 +9,33 @@
   .m { position: absolute; width: 26px; height: 26px; margin: -38px 0 0 10px; border-radius: 50%; display: grid; place-items: center;
        color: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 0 12px currentColor; animation: pop .25s ease-out both; }
   .m span { color: #fff; }
-  .top { background: #16a34a; color: #22c55e; }
-  .good { background: #65a30d; color: #a3e635; }
-  .meh { background: #b45309; color: #f59e0b; }
-  .bad { background: #b91c1c; color: #ef4444; opacity: .85; }
-  .neutral { background: #475569; color: #94a3b8; opacity: .7; }
-  .calib { background: #7c3aed; color: #a78bfa; width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+  .m.top { background: #16a34a; color: #22c55e; }
+  .m.good { background: #65a30d; color: #a3e635; }
+  .m.meh { background: #b45309; color: #f59e0b; }
+  .m.bad { background: #b91c1c; color: #ef4444; opacity: .85; }
+  .m.neutral { background: #475569; color: #94a3b8; opacity: .7; }
+  .m.calib { background: #7c3aed; color: #a78bfa; width: 12px; height: 12px; margin: -6px 0 0 -6px; }
   @keyframes pop { from { transform: scale(.3); opacity: 0; } }
+
+  /* Pastille de verdict près du curseur (compétences, Parangon) : style néon de l'overlay.
+     Pas de filtre CSS : sur une fenêtre transparente il dessine un rectangle gris. */
+  #hint { position: absolute; display: none; max-width: 340px; padding: 1.5px; background: var(--c);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); animation: pop .15s ease-out both; }
+  #hint.on { display: block; }
+  #hint .in { clip-path: inherit; background: rgba(8,12,16,.94); padding: 7px 12px 8px; }
+  #hint .t { font: 700 15px/1.25 "Bahnschrift SemiCondensed", "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .02em; color: var(--c); }
+  #hint .s { font: 400 11.5px/1.35 "Cascadia Mono", Consolas, monospace; color: #9fb0ba; margin-top: 3px; }
+  #hint.top { --c: #4ade80; } #hint.good { --c: #4be3c1; } #hint.meh { --c: #fbbf24; } #hint.bad { --c: #ff5d73; } #hint.neutral { --c: #7d8b96; }
 </style>
 </head>
 <body>
+<div id="markers"></div>
+<div id="hint"><div class="in"><div class="t"></div><div class="s"></div></div></div>
 <script>
   const ICON = { top: "★", good: "✓", meh: "~", bad: "✗", neutral: "·", calib: "" };
+  const box = document.getElementById("markers");
   window.api.on("markers", (cells) => {
-    document.body.innerHTML = "";
+    box.innerHTML = "";
     cells.forEach((c, i) => {
       const el = document.createElement("div");
       el.className = "m " + c.level;
@@ -31,8 +44,27 @@
       el.style.animationDelay = i * 12 + "ms";
       el.innerHTML = `<span>${ICON[c.level] ?? "·"}</span>`;
       el.title = c.label || "";
-      document.body.appendChild(el);
+      box.appendChild(el);
     });
+  });
+
+  // Pastille : sous le curseur, décalée à droite ; repliée à gauche / au-dessus près des bords
+  const hint = document.getElementById("hint");
+  window.api.on("hint", (h) => {
+    if (!h) return hint.classList.remove("on");
+    hint.className = h.level || "neutral";
+    hint.querySelector(".t").textContent = h.text;
+    hint.querySelector(".s").textContent = h.sub || "";
+    hint.querySelector(".s").style.display = h.sub ? "" : "none";
+    hint.classList.add("on");
+    const w = hint.offsetWidth;
+    const hgt = hint.offsetHeight;
+    let x = h.x + 18;
+    let y = h.y + 26;
+    if (x + w > innerWidth - 8) x = h.x - w - 18;
+    if (y + hgt > innerHeight - 8) y = h.y - hgt - 18;
+    hint.style.left = Math.max(8, x) + "px";
+    hint.style.top = Math.max(8, y) + "px";
   });
 </script>
 </body>

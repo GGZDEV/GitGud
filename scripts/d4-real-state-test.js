@@ -12,7 +12,7 @@ for (const f of ["state.json", "dict.json"]) fs.copyFileSync(path.join(src, f), 
   await m.ready();
   const v = m.variant;
   console.log(`variante : ${v.name}`);
-  for (const [slot, it] of Object.entries(m.state.equipped)) {
+  for (const [slot, it] of Object.entries(m.equipped)) {
     const ev = evaluate(it, v, {});
     console.log(`\n${slot} — ${it.name} (${it.typeLine}) → emplacement lu : ${it.slot}`);
     for (const c of ev?.checks || []) console.log(`   ${c.wanted ? "✓" : "✗"} ${c.text}`);

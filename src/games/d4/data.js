@@ -1,4 +1,5 @@
-// Données de jeu Diablo IV (textes FR/EN des affixes, types d'objets, uniques, compétences),
+// Données de jeu Diablo IV (textes FR/EN des affixes, types d'objets, uniques, compétences et
+// leurs modificateurs, classes, plateaux / nœuds / glyphes de Parangon),
 // tirées des fichiers publics de Maxroll puis réduites à un petit dictionnaire mis en cache
 // une semaine dans le dossier de l'app.
 const fs = require("fs");
@@ -6,7 +7,7 @@ const path = require("path");
 
 const BASE = "https://assets-ng.maxroll.gg/d4-tools/game";
 const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-const VERSION = 4; // à augmenter quand le contenu du dictionnaire change
+const VERSION = 5; // à augmenter quand le contenu du dictionnaire change
 
 let dict = null;
 let loading = null;
@@ -58,7 +59,23 @@ async function build() {
     affixes: pick(en.attributeDescriptions, fr.attributeDescriptions, (a, b) => ({ en: a, fr: b })),
     itemTypes: pick(en.itemTypes, fr.itemTypes, (a, b) => ({ en: stripGender(a.name), fr: stripGender(b.name) })),
     uniques: pick(en.items, fr.items, (a, b) => ({ en: a.name, fr: stripGender(b.name) })),
+    // Compétences : classe (index de « classes ») et modificateurs, dans le même ordre en EN et FR
     skills: pick(en.skills, fr.skills, (a, b) => ({ en: a.name, fr: stripGender(b.name) })),
+    skillInfo: Object.fromEntries(
+      Object.entries(min.skills || {})
+        .filter(([k, x]) => x.class != null && en.skills?.[k] && fr.skills?.[k])
+        .map(([k, x]) => [k, { cls: x.class, mods: (en.skills[k].mods || []).map((m, i) => ({ en: m.name, fr: stripGender(fr.skills[k].mods?.[i]?.name) })) }]),
+    ),
+    classes: Object.fromEntries(
+      Object.entries(min.classes || {}).map(([i, c]) => [i, { en: c.name, fr: fr.classes?.[i]?.nameMale || c.name, frFemale: fr.classes?.[i]?.nameFemale || null, boards: c.paragonBoards || [] }]),
+    ),
+    // Parangon : grille de chaque plateau (clés de nœuds, ligne par ligne), noms des nœuds
+    // rares / légendaires et des glyphes
+    paragonBoards: Object.fromEntries(
+      Object.entries(min.paragonBoards || {}).map(([k, b]) => [k, { en: en.paragonBoards?.[k]?.name || k, fr: fr.paragonBoards?.[k]?.name || null, width: b.width, nodes: b.nodes }]),
+    ),
+    paragonNodes: pick(en.paragonNodes, fr.paragonNodes, (a, b) => ({ en: a.name, fr: b.name })),
+    paragonGlyphs: pick(en.paragonGlyphs, fr.paragonGlyphs, (a, b) => ({ en: a.name, fr: b.name })),
     resources: pick(en.uiStrings?.resourceType, fr.uiStrings?.resourceType, (a, b) => ({ en: a, fr: b })),
   };
 }

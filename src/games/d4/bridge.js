@@ -6,6 +6,7 @@ const path = require("path");
 const { EventEmitter } = require("events");
 
 const IDLE_MS = 120;
+const END_MS = 15; // l'action associée (« Remboursement », « Assigner… ») suit la ligne d'aide sans délai
 const END = /^(bouton (gauche|droit) de la souris|left mouse button|right mouse button|scroll down|molette)/i;
 
 // Début de l'infobulle d'objet : dernier nom en majuscules (comme D4LF), suivi d'une ligne de type.
@@ -55,8 +56,7 @@ class D4Bridge extends EventEmitter {
     if (!line) return;
     this.buffer.push(line);
     clearTimeout(this.timer);
-    if (END.test(line)) this.flush();
-    else this.timer = setTimeout(() => this.flush(), IDLE_MS);
+    this.timer = setTimeout(() => this.flush(), END.test(line) ? END_MS : IDLE_MS);
   }
 
   flush() {
@@ -65,7 +65,7 @@ class D4Bridge extends EventEmitter {
     this.buffer = [];
     if (!lines.length) return;
     const start = itemStart(lines);
-    this.emit("tooltip", { lines: start >= 0 ? lines.slice(start) : lines, isItem: start >= 0, at: Date.now() });
+    this.emit("tooltip", { lines: start >= 0 ? lines.slice(start) : lines, raw: lines, isItem: start >= 0, at: Date.now() });
   }
 }
 

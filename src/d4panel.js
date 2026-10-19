@@ -1,5 +1,5 @@
-// Panneau Diablo IV : builds (import multi-sites, build vierge, variante), priorités modifiables,
-// équipement porté face au build, connexion au jeu et scan.
+// Panneau Diablo IV : personnages, builds (import multi-sites, build vierge, variante), plan des
+// compétences et du Parangon, priorités modifiables, équipement porté face au build, connexion et scan.
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const SOURCES = { mobalytics: "Mobalytics", maxroll: "Maxroll", d4builds: "D4Builds", manuel: "Perso" };
@@ -27,7 +27,21 @@ function render(sum) {
   $("status").className = "status " + cls;
   $("status").textContent = text;
   $("connStatus").innerHTML = `<span class="${cls === "on" ? "ok" : cls === "bad" ? "ko" : "muted"}">${esc(text)}</span>`;
-  $("activeName").textContent = sum.build ? `${sum.build.name}${sum.build.className ? " · " + sum.build.className : ""}` : "Aucun build";
+  const ch = sum.characters.find((c) => c.id === sum.activeCharacterId);
+  $("activeName").textContent = `${ch?.label || "Personnage"}${ch?.className ? " · " + ch.className : ""} — ${sum.build ? sum.build.name : "aucun build"}`;
+
+  // Personnages
+  $("chars").innerHTML = sum.characters
+    .map((c) => `
+      <div class="char ${c.id === sum.activeCharacterId ? "active" : ""}" data-id="${c.id}">
+        <div class="cn">${esc(c.label)}</div>
+        <div class="cb">${esc(c.className || "classe inconnue")} · ${c.buildName ? esc(c.buildName) : "aucun build"}</div>
+        <div class="cb">${c.equippedCount}/10 pièces connues</div>
+        <div class="tools"><button class="icon" data-act="rename" title="Renommer">✎</button>${sum.characters.length > 1 ? '<button class="icon" data-act="delete" title="Supprimer">🗑</button>' : ""}</div>
+      </div>`)
+    .join("");
+  $("buildsHint").textContent = `Clique sur un build pour l'associer à ${ch?.label || "ce personnage"}.`;
+  renderPlan();
 
   // Liste des builds
   $("builds").innerHTML = sum.builds.length
@@ -55,6 +69,68 @@ function render(sum) {
     draft = sum.variant ? JSON.parse(JSON.stringify(sum.variant)) : null;
     renderPriorities();
   }
+}
+
+$("chars").addEventListener("click", async (e) => {
+  const card = e.target.closest(".char");
+  if (!card) return;
+  const id = card.dataset.id;
+  const act = e.target.dataset.act;
+  if (act === "delete") {
+    if (confirm("Supprimer ce personnage (son équipement mémorisé et son scan) ? Les builds sont conservés.")) render(await window.api.invoke("d4:delete-character", id));
+  } else if (act === "rename") {
+    const nameEl = card.querySelector(".cn");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = summary.characters.find((c) => c.id === id)?.name || "";
+    input.placeholder = "Nom exact du personnage dans le jeu";
+    nameEl.replaceWith(input);
+    input.focus();
+    input.addEventListener("keydown", (k) => k.key === "Enter" && input.blur());
+    input.addEventListener("blur", async () => render(await window.api.invoke("d4:update-character", { id, name: input.value })), { once: true });
+    input.addEventListener("click", (k) => k.stopPropagation());
+  } else if (e.target.tagName !== "INPUT" && id !== summary.activeCharacterId) {
+    if (dirty && !confirm("Des modifications de priorités ne sont pas enregistrées. Changer de personnage quand même ?")) return;
+    dirty = false;
+    render(await window.api.invoke("d4:active-character", id));
+  }
+});
+
+$("addChar").onclick = async () => {
+  dirty = false;
+  render(await window.api.invoke("d4:add-character", { name: $("charName").value }));
+  $("charName").value = "";
+};
+
+// ---------- Compétences & Parangon ----------
+function renderPlan() {
+  const plan = summary?.variant?.plan;
+  if (!summary?.build) {
+    $("planBody").innerHTML = '<div class="muted">Aucun build associé à ce personnage.</div>';
+    return;
+  }
+  if (!plan) {
+    $("planBody").innerHTML = `<div class="card muted">${summary.build.source === "mobalytics" ? "Plan en cours de récupération auprès de Mobalytics… (réimporte le lien si rien n'apparaît)" : "Le plan des compétences et du Parangon n'est disponible que pour les builds Mobalytics pour l'instant."}</div>`;
+    return;
+  }
+  const p = plan.paragon;
+  const uniq = (list) => [...new Set(list.map((n) => n.fr))];
+  $("planBody").innerHTML = `
+    <div class="plan">
+      <div class="card"><h2>Compétences</h2>
+        ${plan.skills.map((s) => `
+          <div class="skill"><b>${esc(s.fr)}</b>${s.onBar ? ' <span class="badge">barre</span>' : ""}<span class="r">rang ${s.rank}</span>
+            <div class="mods">${s.mods.map((m) => `<span class="${m.big ? "big" : ""}">${m.big ? "◆ " : ""}${esc(m.fr)}</span>`).join(" · ") || "—"}</div></div>`).join("")}
+        <div class="hint">◆ = modificateur principal (un seul possible par compétence).</div>
+      </div>
+      <div class="card"><h2>Parangon</h2>
+        <div class="sub">Plateaux</div><div class="chips">${p.boards.map((b) => `<span class="badge">${esc(b.fr || b.en)}</span>`).join("")}</div>
+        <div class="sub">Glyphes</div><div class="chips">${p.glyphs.map((g) => `<span class="badge src">${esc(g.fr)}${g.level ? " · niv. " + g.level : ""}</span>`).join("")}</div>
+        <div class="sub">Nœuds légendaires</div><div class="chips">${uniq(p.legendaries).map((n) => `<span class="badge">${esc(n)}</span>`).join("") || "—"}</div>
+        <div class="sub">Nœuds rares</div><div class="chips">${uniq(p.rares).map((n) => `<span class="badge">${esc(n)}</span>`).join("") || "—"}</div>
+        <div class="hint">Les nœuds normaux et magiques n'ont pas de nom dans le jeu : la pastille indique seulement leur bonus.</div>
+      </div>
+    </div>`;
 }
 
 $("builds").addEventListener("click", async (e) => {
@@ -234,6 +310,7 @@ $("sync").onclick = async () => {
 // ---------- Connexion & scan ----------
 $("calib").onclick = () => window.api.invoke("d4:calibrate");
 $("card").onchange = () => window.api.invoke("d4:settings", { d4ItemCard: $("card").checked });
+$("hints").onchange = () => window.api.invoke("d4:settings", { d4Hints: $("hints").checked });
 
 // ---------- Démarrage et mises à jour en direct ----------
 window.api.on("d4:summary", (s) => {
@@ -246,6 +323,7 @@ window.api.on("d4:status", async () => render(await window.api.invoke("d4:summar
   render(await window.api.invoke("d4:summary"));
   const st = await window.api.invoke("d4:settings");
   $("card").checked = st.d4ItemCard;
+  $("hints").checked = st.d4Hints;
   $("scanInfo").textContent = `Scan : touche ${st.scanKey} (inventaire ouvert). Le 1er appui lance le calibrage. Échap pour arrêter. Modifiable dans Paramètres → Raccourcis.`;
   affixChoices = await window.api.invoke("d4:affix-choices");
   $("affixList").innerHTML = affixChoices.map((c) => `<option value="${esc(c.label)}">`).join("");

@@ -2,6 +2,7 @@
 // format commun : emplacements → objet ou aspect visé, affixes voulus (★ = supérieur), trempes,
 // gemmes ; priorités d'équipement ; compétences ; plateaux de Parangon et glyphes.
 const { clean } = require("./affixes");
+const { planFromMobalytics } = require("./planner");
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
@@ -130,6 +131,8 @@ async function importMobalytics(url, matcher, dict) {
       skills: (v.assignedSkills?.skills || []).map((s) => s.skill?.name).filter(Boolean),
       spiritGuardians: v.assignedSkills?.spiritGuardians || null,
       paragon: (v.paragon?.boards || []).map((b) => ({ board: humanize(b.board?.slug || ""), glyph: b.glyph ? humanize(b.glyph.slug) : null, glyphLevel: b.glyphLevel })),
+      // Compétences (rangs, modificateurs) et Parangon (nœuds rares, glyphes) : verdict au survol
+      plan: planFromMobalytics(v, dict, className),
     })),
   };
 }
