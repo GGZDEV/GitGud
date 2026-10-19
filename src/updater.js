@@ -12,7 +12,7 @@ function initUpdater({ onReady, onStatus }) {
   autoUpdater.autoInstallOnAppQuit = true; // …installée à la fermeture de l'app
 
   autoUpdater.on("update-available", (i) => onStatus(`Mise à jour ${i.version} en téléchargement…`));
-  autoUpdater.on("update-not-available", () => onStatus("GameHelper est à jour."));
+  autoUpdater.on("update-not-available", () => onStatus("GitGud est à jour."));
   autoUpdater.on("update-downloaded", (i) => onReady(i.version));
   autoUpdater.on("error", (err) => onStatus("Mise à jour impossible : " + err.message));
 

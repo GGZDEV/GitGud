@@ -26,8 +26,35 @@ const diablo4Game = require("./src/games/diablo4");
 
 const CONVERSATION_TIMEOUT_MS = 5 * 60 * 1000;
 
-// Profil séparé (tests, ou plusieurs configurations) : GAMEHELPER_DATA=dossier
-if (process.env.GAMEHELPER_DATA) app.setPath("userData", process.env.GAMEHELPER_DATA);
+// Profil séparé (tests, ou plusieurs configurations) : GITGUD_DATA=dossier
+if (process.env.GITGUD_DATA) app.setPath("userData", process.env.GITGUD_DATA);
+else migrateUserData();
+
+// L'app s'appelait GameHelper : on reprend son dossier (%APPDATA%/gamehelper) au premier lancement
+// de GitGud, avec réglages, builds Diablo IV, modèles et voix déjà téléchargés.
+function migrateUserData() {
+  const fs = require("fs");
+  const dest = app.getPath("userData");
+  const old = path.join(app.getPath("appData"), "gamehelper");
+  if (!fs.existsSync(old) || fs.existsSync(path.join(dest, "settings.json"))) return;
+  try {
+    if (fs.existsSync(dest)) throw new Error("dossier déjà créé");
+    fs.renameSync(old, dest); // le plus rapide : rien à copier
+    return;
+  } catch {}
+  // Ancienne app encore ouverte (fichiers verrouillés) : copie élément par élément, sans les
+  // caches de Chromium, qui se recréent seuls
+  const CACHES = /^(Cache|Code Cache|GPUCache|DawnGraphiteCache|DawnWebGPUCache|Network|Shared Dictionary|blob_storage|Session Storage)$/;
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(old)) {
+    if (CACHES.test(entry)) continue;
+    try {
+      fs.cpSync(path.join(old, entry), path.join(dest, entry), { recursive: true, force: false });
+    } catch (err) {
+      console.warn(`Migration des données GameHelper (${entry}) :`, err.message);
+    }
+  }
+}
 
 let settings;
 let ai;
@@ -114,7 +141,7 @@ function openSettings() {
     minWidth: 520,
     minHeight: 480,
     backgroundColor: "#07090d",
-    title: "GameHelper — Paramètres",
+    title: "GitGud — Paramètres",
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload.js") },
   });
@@ -131,16 +158,16 @@ function openWizard() {
   wizardWin = new BrowserWindow({
     width: 760,
     height: 760,
-    title: "GameHelper — Configuration",
+    title: "GitGud — Configuration",
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload.js") },
   });
   wizardWin.setMenu(null);
   wizardWin.loadFile(path.join(__dirname, "src", "wizard.html"));
-  if (process.env.GAMEHELPER_SNAPSHOT) snapshotWizard(process.env.GAMEHELPER_SNAPSHOT);
+  if (process.env.GITGUD_SNAPSHOT) snapshotWizard(process.env.GITGUD_SNAPSHOT);
 }
 
-// Développement : capture chaque étape de l'assistant en PNG (GAMEHELPER_SNAPSHOT=dossier).
+// Développement : capture chaque étape de l'assistant en PNG (GITGUD_SNAPSHOT=dossier).
 function snapshotWizard(dir) {
   const fs = require("fs");
   wizardWin.webContents.once("did-finish-load", async () => {
@@ -193,7 +220,7 @@ function refreshTrayMenu() {
       { label: "Quitter", click: () => app.quit() },
     ])
   );
-  tray.setToolTip(`GameHelper — ${labels.ptt} pour parler`);
+  tray.setToolTip(`GitGud — ${labels.ptt} pour parler`);
 }
 
 function createTray() {
@@ -342,7 +369,7 @@ async function ask(question) {
       settings,
       system,
       history,
-      question: context ? `[Contexte fourni par GameHelper]\n${context}\n\n[Question du joueur]\n${question}` : question,
+      question: context ? `[Contexte fourni par GitGud]\n${context}\n\n[Question du joueur]\n${question}` : question,
       imageJpegB64: shot?.jpegB64,
       onDelta: (d) => seq === requestSeq && send("assistant-delta", d),
     });
@@ -658,7 +685,7 @@ function openD4Panel() {
   d4Win = new BrowserWindow({
     width: 980,
     height: 820,
-    title: "GameHelper — Diablo IV",
+    title: "GitGud — Diablo IV",
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, "preload.js") },
   });
@@ -751,7 +778,7 @@ ipcMain.handle("setup:finish", (_e, patch) => {
 ipcMain.handle("sources:list", async () => {
   const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 0, height: 0 } });
   return sources
-    .filter((s) => s.name && !s.name.startsWith("GameHelper"))
+    .filter((s) => s.name && !s.name.startsWith("GitGud"))
     .map((s) => ({ id: s.id, name: s.name }));
 });
 
@@ -831,13 +858,13 @@ function preloadModels() {
 
 function preloadWhisper() {
   Promise.resolve(ai.preloadWhisper(settings))
-    .then(() => tray?.setToolTip("GameHelper — Alt+V pour parler"))
+    .then(() => tray?.setToolTip("GitGud — Alt+V pour parler"))
     .catch((err) => console.warn("Whisper :", err.message));
 }
 
 function onDownloadProgress(p) {
   const what = p.kind === "voice" ? "de la voix" : "de Whisper";
-  tray?.setToolTip(`GameHelper — téléchargement ${what} ${p.progress}%`);
+  tray?.setToolTip(`GitGud — téléchargement ${what} ${p.progress}%`);
   send("download", p);
   broadcast("setup:progress", p);
 }
@@ -859,15 +886,15 @@ app.whenReady().then(() => {
     onReady: (version) => {
       updateReady = version;
       refreshTrayMenu();
-      tray.displayBalloon?.({ title: "GameHelper", content: `Version ${version} prête : elle s'installera à la fermeture.` });
+      tray.displayBalloon?.({ title: "GitGud", content: `Version ${version} prête : elle s'installera à la fermeture.` });
     },
     onStatus: (msg) => console.log("[mise à jour]", msg),
   });
   refreshTrayMenu();
   if (settings.setupDone) preloadModels();
   else openWizard();
-  if (process.env.GAMEHELPER_OPEN === "settings") openSettings(); // développement : ouvre les paramètres
-  if (process.env.GAMEHELPER_OPEN === "d4") openD4Panel();
+  if (process.env.GITGUD_OPEN === "settings") openSettings(); // développement : ouvre les paramètres
+  if (process.env.GITGUD_OPEN === "d4") openD4Panel();
 });
 
 app.on("window-all-closed", (e) => e.preventDefault()); // reste dans la zone de notification

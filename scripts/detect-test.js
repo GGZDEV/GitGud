@@ -1,4 +1,4 @@
-// Affiche ce que GameHelper détecte sur la machine : npx electron scripts/detect-test.js
+// Affiche ce que GitGud détecte sur la machine : npx electron scripts/detect-test.js
 const { app } = require("electron");
 const { detectAll } = require("../src/setup/detect");
 

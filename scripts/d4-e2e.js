@@ -5,7 +5,7 @@
 const path = require("path");
 const fs = require("fs");
 const [profile, out] = process.argv.slice(-2);
-process.env.GAMEHELPER_DATA = profile;
+process.env.GITGUD_DATA = profile;
 
 const build = require("../build/d4/test-build.json");
 const endgame = build.variants.find((v) => v.name === "Endgame");

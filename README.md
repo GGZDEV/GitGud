@@ -1,8 +1,8 @@
-# GameHelper
+# GitGud
 
 Assistant IA open source pour jeux PC, inspiré de Gamekin : tu poses une question à la voix pendant que tu joues, il regarde l'écran du jeu et te répond dans un overlay, à voix haute.
 
-**Aucun abonnement GameHelper, aucun serveur.** Tout tourne sur ta machine et utilise **ton** accès IA :
+**Aucun abonnement GitGud, aucun serveur.** Tout tourne sur ta machine et utilise **ton** accès IA :
 
 | Moteur des réponses | Ce qu'il faut |
 |---|---|
@@ -19,14 +19,14 @@ Deux installateurs (`npm run dist` / `npm run dist:full`) :
 
 | Installateur | Taille | Contenu |
 |---|---|---|
-| `GameHelper-Setup-x.y.z.exe` | ~120 Mo | l'app ; le modèle Whisper se télécharge pendant la configuration |
-| `GameHelper-Setup-x.y.z-complet.exe` | ~305 Mo | l'app + Whisper Small inclus, la voix marche hors ligne dès l'installation |
+| `GitGud-Setup-x.y.z.exe` | ~120 Mo | l'app ; le modèle Whisper se télécharge pendant la configuration |
+| `GitGud-Setup-x.y.z-complet.exe` | ~305 Mo | l'app + Whisper Small inclus, la voix marche hors ligne dès l'installation |
 
 Windows SmartScreen peut avertir : l'exécutable n'est pas signé.
 
 ### Premier lancement : l'assistant de configuration
 
-1. **IA** : GameHelper détecte ce qui est déjà installé, pour ne rien installer en double :
+1. **IA** : GitGud détecte ce qui est déjà installé, pour ne rien installer en double :
    - Codex : app Codex d'OpenAI, installation npm, ou PATH ;
    - Claude Code : installation native, npm, ou la copie fournie par Claude Desktop ;
    - quand plusieurs copies existent, la plus récente est retenue.
@@ -75,7 +75,7 @@ La mascotte réagit au son réel : son halo suit le volume de ta voix quand tu p
 
 ### Jeux pris en charge
 
-GameHelper reconnaît le jeu d'après la fenêtre observée ou les fenêtres ouvertes. Pour les autres jeux, il fonctionne normalement, avec la recherche web.
+GitGud reconnaît le jeu d'après la fenêtre observée ou les fenêtres ouvertes. Pour les autres jeux, il fonctionne normalement, avec la recherche web.
 
 | Jeu | Ce qui est ajouté aux questions |
 |---|---|
@@ -88,7 +88,7 @@ Pour ajouter un jeu, il suffit d'un module dans `src/games/`, sur le modèle de 
 
 ### Module Diablo IV
 
-C'est le même principe que [D4LF](https://github.com/d4lfteam/d4lf) (MIT), dont il reprend la DLL : le jeu envoie le texte de chaque infobulle survolée à un « lecteur d'écran tiers ». La DLL `saapi64.dll`, placée dans le dossier du jeu, le transmet à GameHelper. Rien n'est injecté dans le jeu et aucune mémoire n'est lue.
+C'est le même principe que [D4LF](https://github.com/d4lfteam/d4lf) (MIT), dont il reprend la DLL : le jeu envoie le texte de chaque infobulle survolée à un « lecteur d'écran tiers ». La DLL `saapi64.dll`, placée dans le dossier du jeu, le transmet à GitGud. Rien n'est injecté dans le jeu et aucune mémoire n'est lue.
 
 - **Panneau Diablo IV** (icône de notification → « Diablo IV… », ou depuis les paramètres), en 4 onglets :
   - **Builds :** import de liens **Mobalytics** (guides et builds de profil), **Maxroll** (planificateur ou guide) et **D4Builds**, ou un build vierge créé soi-même. Plusieurs builds sont enregistrés, pratique pour un reroll ; on choisit le build actif et sa variante (Starter, Endgame…).
@@ -169,8 +169,8 @@ Les mises à jour utilisent l'installateur léger : les modèles inclus dans la 
 ## Développement
 
 Variables d'environnement utiles :
-- `GAMEHELPER_DATA=dossier` : utilise un profil séparé (pratique pour rejouer le premier lancement)
-- `GAMEHELPER_SNAPSHOT=dossier` : capture chaque étape de l'assistant en PNG
+- `GITGUD_DATA=dossier` : utilise un profil séparé (pratique pour rejouer le premier lancement)
+- `GITGUD_SNAPSHOT=dossier` : capture chaque étape de l'assistant en PNG
 
 ```bash
 npm run smoke -- --image=capture.jpg question.wav
@@ -191,7 +191,7 @@ Structure :
 
 ## Licences
 
-- **Code de GameHelper :** MIT.
+- **Code de GitGud :** MIT.
 - **Synthèse vocale :** elle embarque [espeak-ng](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) pour la phonétisation. Les installateurs, qui contiennent ce composant, sont donc distribués selon les termes de la GPL-3.0. Le code source complet est ce dépôt.
 - **Voix Piper :** elles ont leurs propres licences (voir les fiches sur [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)).
 - **Modèles Whisper :** MIT.

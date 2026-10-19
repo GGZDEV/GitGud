@@ -1,4 +1,4 @@
-// Persistance des réglages dans %APPDATA%/gamehelper/settings.json.
+// Persistance des réglages dans %APPDATA%/gitgud/settings.json.
 // Les clés API sont chiffrées avec safeStorage (DPAPI Windows).
 const { app, safeStorage } = require("electron");
 const fs = require("fs");

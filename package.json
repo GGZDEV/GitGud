@@ -1,5 +1,5 @@
 {
-  "name": "gamehelper",
+  "name": "gitgud",
   "version": "0.7.1",
   "description": "Assistant IA open source pour jeux PC (voix + vision) : abonnement ChatGPT/Claude ou clés API, Whisper local",
   "main": "main.js",
@@ -28,8 +28,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "local.gamehelper",
-    "productName": "GameHelper",
+    "appId": "dev.ggz.gitgud",
+    "productName": "GitGud",
     "files": [
       "main.js",
       "preload.js",
@@ -47,14 +47,15 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "artifactName": "GameHelper-Setup-${version}.${ext}"
+      "artifactName": "GitGud-Setup-${version}.${ext}"
     },
     "npmRebuild": false,
     "asar": false
   },
   "license": "MIT",
+  "repository": "github:GGZDEV/GitGud",
   "updates": {
-    "owner": "",
-    "repo": "gamehelper"
+    "owner": "GGZDEV",
+    "repo": "GitGud"
   }
 }

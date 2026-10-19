@@ -51,7 +51,7 @@ function download(url, dest, onProgress) {
     const tmp = dest + ".part";
     const get = (u) =>
       https
-        .get(u, { headers: { "User-Agent": "GameHelper" } }, (res) => {
+        .get(u, { headers: { "User-Agent": "GitGud" } }, (res) => {
           if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             res.resume();
             return get(new URL(res.headers.location, u).toString());

@@ -3,7 +3,7 @@
 const fs = require("fs"), os = require("os"), path = require("path");
 const { D4Manager } = require("../src/games/d4/manager");
 const { evaluate } = require("../src/games/d4/evaluate");
-const src = path.join(process.env.APPDATA, "gamehelper", "d4");
+const src = path.join(process.env.APPDATA, "gitgud", "d4");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "d4real-"));
 fs.mkdirSync(path.join(dir, "d4"));
 for (const f of ["state.json", "dict.json"]) fs.copyFileSync(path.join(src, f), path.join(dir, "d4", f));

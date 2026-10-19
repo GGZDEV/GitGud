@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' blob:; style-src 'self' 'unsafe-inline'">
 <link rel="stylesheet" href="ui/mascots.css">
-<title>GameHelper — Configuration</title>
+<title>GitGud — Configuration</title>
 <style>
   :root { color-scheme: dark; --bg: #121019; --card: #1b1826; --card2: #221e31; --line: #2c2840; --fg: #ece9f5; --muted: #9a94ad; --accent: #8b50f0; --ok: #3ddc97; --warn: #f5b942; --err: #ff6b6b; }
   * { box-sizing: border-box; }
@@ -50,7 +50,7 @@
 </head>
 <body>
 <header>
-  <h1>Bienvenue dans GameHelper</h1>
+  <h1>Bienvenue dans GitGud</h1>
   <div class="steps" id="steps"></div>
 </header>
 
@@ -58,7 +58,7 @@
   <!-- 1. Moteur IA -->
   <section class="step" data-title="IA">
     <h2>1. Le cerveau de l'assistant</h2>
-    <p class="sub">GameHelper utilise ton propre accès IA. J'ai cherché ce qui est déjà installé sur ton PC pour ne rien installer en double.</p>
+    <p class="sub">GitGud utilise ton propre accès IA. J'ai cherché ce qui est déjà installé sur ton PC pour ne rien installer en double.</p>
     <div id="providers"></div>
     <div class="row"><button class="ghost small" id="redetect">↻ Relancer la détection</button><span class="hint" id="detectInfo"></span></div>
   </section>
@@ -90,7 +90,7 @@
   <!-- 3. Jeu -->
   <section class="step" data-title="Jeu">
     <h2>3. Ton jeu</h2>
-    <p class="sub">GameHelper regarde la fenêtre choisie quand tu poses une question. L'overlay lui-même n'apparaît jamais sur la capture.</p>
+    <p class="sub">GitGud regarde la fenêtre choisie quand tu poses une question. L'overlay lui-même n'apparaît jamais sur la capture.</p>
     <label>Fenêtre à observer</label>
     <div class="row"><select id="target"></select><button class="ghost small" id="refreshTarget">↻</button></div>
     <div class="hint">Lance ton jeu d'abord pour le voir dans la liste. « Écran entier » marche avec tous les jeux. Mets le jeu en <b>fenêtré sans bordure</b> pour voir l'overlay par-dessus.</div>
@@ -110,7 +110,7 @@
   <!-- 4. Prêt -->
   <section class="step" data-title="Prêt">
     <h2>4. C'est prêt</h2>
-    <p class="sub">GameHelper reste dans la zone de notification, à côté de l'horloge : c'est l'icône de ta mascotte.</p>
+    <p class="sub">GitGud reste dans la zone de notification, à côté de l'horloge : c'est l'icône de ta mascotte.</p>
     <label>Raccourcis (modifiables)</label>
     <div id="hotkeys"></div>
     <div class="hint">Astuce : tire l'en-tête de l'overlay (la mascotte) pour le placer où tu veux, sa position est mémorisée.</div>

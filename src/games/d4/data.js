@@ -13,7 +13,7 @@ let dict = null;
 let loading = null;
 
 async function getJson(url) {
-  const res = await fetch(url, { headers: { "User-Agent": "GameHelper" } });
+  const res = await fetch(url, { headers: { "User-Agent": "GitGud" } });
   if (!res.ok) throw new Error(`Maxroll : ${res.status} (${url})`);
   return res.json();
 }

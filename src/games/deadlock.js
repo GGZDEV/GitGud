@@ -10,7 +10,7 @@ const cache = new Map();
 async function cached(key, url) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
-  const res = await fetch(url, { headers: { "User-Agent": "GameHelper" } });
+  const res = await fetch(url, { headers: { "User-Agent": "GitGud" } });
   if (!res.ok) throw new Error(`deadlock-api.com : ${res.status}`);
   const data = await res.json();
   cache.set(key, { at: Date.now(), data });

@@ -4,5 +4,5 @@ const base = require("./electron-builder.config.js");
 module.exports = {
   ...base,
   extraResources: [{ from: "build/models", to: "models" }],
-  nsis: { ...base.nsis, artifactName: "GameHelper-Setup-${version}-complet.${ext}" },
+  nsis: { ...base.nsis, artifactName: "GitGud-Setup-${version}-complet.${ext}" },
 };

@@ -66,7 +66,7 @@ function registerSetupIpc({ getSettings, ai }) {
     if (provider === "claude-cli") settings.claudeCliModel = "haiku";
     if (provider === "codex-cli") settings.codexEffort = "low";
     // Instance dédiée : les tests tournent en parallèle sans couper la conversation en cours.
-    const dir = path.join(os.tmpdir(), "gamehelper-test", provider);
+    const dir = path.join(os.tmpdir(), "gitgud-test", provider);
     const engine = provider === "claude-cli" ? new ClaudeCli(dir) : provider === "codex-cli" ? new CodexCli(dir) : api;
     const t = Date.now();
     try {

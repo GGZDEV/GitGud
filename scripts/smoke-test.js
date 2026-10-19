@@ -28,7 +28,7 @@ async function timed(label, fn) {
 
 app.whenReady().then(async () => {
   const settings = { ...store.DEFAULTS, ...store.load(), webSearch: false };
-  const ai = new AI(path.join(app.getPath("temp"), "gamehelper-smoke"));
+  const ai = new AI(path.join(app.getPath("temp"), "gitgud-smoke"));
 
   // Capture réelle pour vérifier qu'elle fonctionne, mais on envoie une image fournie
   // (--image=fichier.jpg) si présente, pour ne pas transmettre le contenu de l'écran.
