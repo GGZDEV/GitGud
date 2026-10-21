@@ -3,8 +3,9 @@ const FIELDS = [
   "provider", "codexModel", "codexEffort", "claudeCliModel", "anthropicModel", "effort", "openaiModel",
   "anthropicKey", "openaiKey", "mascot", "language",
   "sttEngine", "whisperModel", "whisperDevice", "ttsEngine", "systemVoice", "ttsVoice", "autoHideSeconds", "deadlockAccountId",
+  "claudeFastModel", "codexFastModel", "codexFastEffort", "anthropicFastModel", "openaiFastModel",
 ];
-const CHECKS = ["webSearch", "useVision", "voiceEnabled", "overlayCompact"];
+const CHECKS = ["webSearch", "useVision", "voiceEnabled", "overlayCompact", "fastLane", "memoryEnabled", "annotations"];
 const RANGES = { overlayScale: (v) => `${Math.round(v * 100)} %`, overlayOpacity: (v) => `${Math.round(v * 100)} %` };
 
 let current;
@@ -171,5 +172,59 @@ $("save").onclick = async () => {
 
 // Diablo IV : panneau dédié
 $("openD4").onclick = () => window.api.invoke("d4:open-panel");
+
+const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
+
+// Modules de jeu : intégrés (code ou JSON) et ajoutés dans le dossier perso
+async function loadGames() {
+  const { games, errors } = await window.api.invoke("games:list");
+  const box = $("gameList");
+  box.innerHTML = "";
+  for (const g of games) {
+    const row = el("div", "item");
+    row.append(el("span", "k", g.origin), el("span", "t", g.name + (g.description ? ` — ${g.description}` : "")));
+    const extras = [g.live && "données en direct", g.timers && `${g.timers} minuteur${g.timers > 1 ? "s" : ""}`].filter(Boolean).join(" · ");
+    if (extras) row.append(el("span", "m", extras));
+    box.append(row);
+  }
+  for (const e of errors) box.append(el("div", "item err", "⚠ " + e));
+}
+$("openGames").onclick = () => window.api.invoke("games:open-folder");
+$("reloadGames").onclick = loadGames;
+
+// Mémoire : souvenirs par jeu, supprimables un par un
+function ago(ts) {
+  const d = Math.floor((Date.now() - ts) / 86400000);
+  return d <= 0 ? "aujourd'hui" : d === 1 ? "hier" : `il y a ${d} j`;
+}
+
+function renderMemory(groups) {
+  const box = $("memoryList");
+  box.innerHTML = "";
+  const withFacts = groups.filter((g) => g.facts.length);
+  if (!withFacts.length) {
+    box.append(el("div", "empty", "Rien pour l'instant. Parle de tes objectifs ou de ce qui te bloque pendant une partie."));
+    return;
+  }
+  for (const g of withFacts) {
+    box.append(el("h3", null, g.name));
+    for (const f of g.facts) {
+      const row = el("div", "item");
+      const del = el("button", "ghost small", "✕");
+      del.type = "button";
+      del.title = "Oublier";
+      del.onclick = async () => renderMemory(await window.api.invoke("memory:delete", f.id));
+      row.append(el("span", "k", f.label), el("span", "t", f.text), el("span", "m", ago(f.at) + (f.count > 1 ? ` · ×${f.count}` : "")), del);
+      box.append(row);
+    }
+  }
+}
+$("memoryClear").onclick = async () => {
+  if (confirm("Effacer toute la mémoire de GitGud (souvenirs et questions passées) ?")) renderMemory(await window.api.invoke("memory:clear"));
+};
+document.querySelector('nav [data-tab="memoire"]').addEventListener("click", async () => renderMemory(await window.api.invoke("memory:list")));
+document.querySelector('nav [data-tab="jeux"]').addEventListener("click", loadGames);
+window.api.invoke("memory:list").then(renderMemory);
+loadGames();
 
 init();

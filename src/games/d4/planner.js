@@ -127,6 +127,9 @@ const RE = {
   refund: /^(Remboursement|Refund)$/i,
   locked: /^(Pas encore déverrouillé|Not yet unlocked)/i,
   weapon: /^(Dégâts\s+des\s+armes|Weapon\s+Damage)$/i,
+  toughness: /^(Robustesse|Toughness)$/i,
+  // Nom de personnage tel que l'affiche la fiche : une seule « forme », en majuscules, sans espace
+  charName: /^[A-ZÀ-ÖØ-Þ]{2,16}$/,
 };
 const RARITY = { normal: "normal", magique: "magic", magic: "magic", rare: "rare", légendaire: "legendary", legendary: "legendary" };
 const isHotkey = (l) => /^\d$|^[A-Z]$/.test(l);
@@ -182,9 +185,9 @@ function parseTooltip(input) {
     const g = rest.findIndex((l) => RE.glyph.test(l));
     return { kind, glyph: g >= 0 ? rest[g + 1] || null : null };
   }
-  // Fiche de personnage : NOM, titre, « Dégâts des armes »
+  // Fiche de personnage : NOM, titre, « Dégâts des armes », valeur, « Robustesse »…
   const name = lines[i - 2];
-  if (!name || name.length > 24 || /\d/.test(name)) return null;
+  if (!RE.charName.test(name || "") || !lines.slice(i + 1, i + 5).some((l) => RE.toughness.test(l))) return null;
   return { kind: "character", name: name.charAt(0) + name.slice(1).toLowerCase(), title: lines[i - 1] };
 }
 

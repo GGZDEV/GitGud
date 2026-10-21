@@ -12,6 +12,7 @@ class ClaudeCli {
     this.proc = null;
     this.signature = null;
     this.turn = null; // { resolve, reject, onDelta, text }
+    this.seen = 0; // nombre d'échanges de history déjà connus du process
   }
 
   stop() {
@@ -100,27 +101,52 @@ class ClaudeCli {
     }
   }
 
-  // Le contexte de conversation est conservé par le process : history est ignoré ici.
-  async chat({ settings, system, question, imageJpegB64, onDelta }) {
-    const signature = JSON.stringify([settings.claudeCliModel, system, settings.webSearch]);
+  // Lance le process à l'avance : le démarrage de Claude Code (1 à 3 s) n'est plus payé
+  // à la première question.
+  async warm({ model, system, webSearch }) {
+    const signature = JSON.stringify([model, system, webSearch]);
+    if (this.proc && this.signature === signature) return;
+    if (this.turn) return; // une réponse est en cours : on ne la coupe pas
+    this.stop();
+    const { claude: bin } = await getBins();
+    if (!bin || this.proc) return;
+    this.start(bin, { model, system, webSearch });
+    this.signature = signature;
+    this.seen = 0;
+  }
+
+  // Le contexte de conversation est conservé par le process. Les échanges de history qu'il
+  // n'a pas vus (process relancé, ou réponse donnée par l'autre voie) lui sont rappelés.
+  // model / webSearch : imposés par la voie rapide, sinon ceux des réglages.
+  async chat({ settings, system, history = [], question, imageJpegB64, onDelta, model = settings.claudeCliModel, webSearch = settings.webSearch }) {
+    const signature = JSON.stringify([model, system, webSearch]);
     if (this.turn || (this.proc && this.signature !== signature)) this.stop();
     if (!this.proc) {
       const { claude: bin } = await getBins();
       if (!bin) throw new Error("Claude Code est introuvable. Relance l'assistant de configuration.");
-      this.start(bin, { model: settings.claudeCliModel, system, webSearch: settings.webSearch });
+      this.start(bin, { model, system, webSearch });
       this.signature = signature;
+      this.seen = 0;
+    }
+
+    const missing = history.slice(Math.max(this.seen || 0, history.length - 6));
+    let text = question;
+    if (missing.length) {
+      text = "Échanges récents (pour le contexte) :\n" + missing.map((m) => `${m.role === "user" ? "Joueur" : "Toi"} : ${m.text}`).join("\n") + "\n\n" + question;
     }
 
     const content = [];
     if (imageJpegB64) {
       content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageJpegB64 } });
     }
-    content.push({ type: "text", text: question });
+    content.push({ type: "text", text });
 
-    return new Promise((resolve, reject) => {
+    const answer = await new Promise((resolve, reject) => {
       this.turn = { resolve, reject, onDelta, text: "" };
       this.proc.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content } }) + "\n");
     });
+    this.seen = history.length + 2; // la question et la réponse rejoignent history ensuite
+    return answer;
   }
 
   reset() {

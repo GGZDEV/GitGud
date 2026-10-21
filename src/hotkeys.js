@@ -79,6 +79,15 @@ class Hotkeys {
 
   setBindings(b) {
     this.bindings = { ...DEFAULT_HOTKEYS, ...(b || {}) };
+    this.syncGamepad();
+  }
+
+  // Mode léger : la manette n'est lue que si un raccourci l'utilise, ou pendant une capture
+  // (pour pouvoir lui assigner un bouton).
+  syncGamepad() {
+    const wanted = this.started && (!!this.capturing || Object.values(this.bindings).some((b) => b?.type === "pad"));
+    if (wanted) this.gamepad.start();
+    else this.gamepad.stop();
   }
 
   labels() {
@@ -86,7 +95,8 @@ class Hotkeys {
   }
 
   start() {
-    this.gamepad.start();
+    this.started = true;
+    this.syncGamepad();
     if (!uiohook) return false;
     const { uIOhook } = uiohook;
     uIOhook.on("keydown", (e) => this.onDown({ type: "key", keycode: e.keycode }, e));
@@ -101,6 +111,7 @@ class Hotkeys {
   }
 
   stop() {
+    this.started = false;
     this.gamepad.stop();
     try {
       uiohook?.uIOhook.stop();
@@ -157,6 +168,7 @@ class Hotkeys {
     return new Promise((resolve) => {
       const timer = setTimeout(() => this.finishCapture(null), 15000);
       this.capturing = { resolve, timer, mods: new Set() }; // modificateurs pressés pendant la capture
+      this.syncGamepad();
     });
   }
 
@@ -179,6 +191,7 @@ class Hotkeys {
     if (!c) return;
     clearTimeout(c.timer);
     this.capturing = null;
+    this.syncGamepad();
     c.resolve(binding);
   }
 

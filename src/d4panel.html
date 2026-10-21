@@ -50,6 +50,8 @@
   .v { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
   .v-top { background: rgba(34,197,94,.18); color: #4ade80; } .v-good { background: rgba(163,230,53,.15); color: #bef264; }
   .v-meh { background: rgba(245,158,11,.15); color: #fbbf24; } .v-bad { background: rgba(239,68,68,.15); color: #f87171; } .v-neutral { background: rgba(148,163,184,.12); color: var(--muted); }
+  .v-later { background: rgba(139,92,246,.18); color: #c4b5fd; }
+  .later { margin-top: 6px; padding-left: 8px; border-left: 2px solid #7c3aed; font-size: 12.5px; } .later b { color: #c4b5fd; }
   .ok { color: var(--ok); } .ko { color: var(--ko); } .muted { color: var(--muted); }
   ul.check { list-style: none; padding: 0; margin: 0; } ul.check li { padding: 3px 0; }
   .chars { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -107,7 +109,7 @@
     <div class="card" id="variantCard" style="display:none">
       <h2>Variante suivie</h2>
       <select id="variant"></select>
-      <div class="hint">La fiche d'objet, le scan et l'IA comparent tes objets à cette variante.</div>
+      <div class="hint">La fiche d'objet, le scan et l'IA comparent tes objets à cette variante. Un objet que recherche une autre variante (ex. l'Endgame quand tu suis le Starter) est signalé ↗ « à garder ».</div>
     </div>
   </section>
 
@@ -150,6 +152,7 @@
       <h2>Fiche d'objet et scan</h2>
       <label class="row"><input type="checkbox" id="card"> Afficher la fiche d'objet (✓ / ✗ par affixe) à chaque survol</label>
       <label class="row" style="margin-top:6px"><input type="checkbox" id="hints"> Pastille ✓ / ✗ au survol des compétences et du Parangon</label>
+      <label class="row" style="margin-top:6px"><input type="checkbox" id="later"> Comparer aussi aux autres variantes du build et aux builds de tes autres personnages : un objet recherché par l'Endgame, ou par ton Sacresprit quand tu joues le Démoniste, est marqué « à garder » au lieu de « à recycler » (les armes d'une autre classe sont ignorées)</label>
       <div class="row" style="margin-top:10px"><button class="ghost" id="calib">Calibrer l'inventaire</button><span class="hint" id="calibInfo"></span></div>
       <div class="hint" id="scanInfo"></div>
     </div>

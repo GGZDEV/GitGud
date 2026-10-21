@@ -44,13 +44,16 @@ const SLOT_WORDS = [
   ["weapon", /\b(baton|quarterstaff|staff|glaive|hache|axe|epee|sword|masse|mace|dague|dagger|arc|bow|arbalete|crossbow|faux|scythe|baguette|wand|fleau|flail|arme d hast|polearm|lance)\b/],
 ];
 
+// Accordés au genre et au nombre du type : « Gants rares », « Gants ancestraux légendaires »
 const RARITIES = [
-  ["mythic", /\b(mythique|mythic)\b/],
-  ["unique", /\b(unique)\b/],
-  ["legendary", /\b(legendaire|legendary)\b/],
-  ["rare", /\b(rare)\b/],
-  ["magic", /\b(magique|magic)\b/],
+  ["mythic", /\b(mythiques?|mythic)\b/],
+  ["unique", /\b(uniques?)\b/],
+  ["legendary", /\b(legendaires?|legendary)\b/],
+  ["rare", /\b(rares?)\b/],
+  ["magic", /\b(magiques?|magic)\b/],
+  ["common", /\b(communs?|communes?|normal|common)\b/],
 ];
+const ANCESTRAL = /\b(ancestral|ancestrale|ancestrales|ancestraux)\b/;
 
 // Pied d'infobulle (comparé au texte nettoyé : sans chiffres ni accents)
 const FOOTER = /^(prix de vente|sell value|requiert le niveau|requires level|niveau requis|durabilite|durability|bouton (gauche|droit)|left mouse|right mouse|molette|mousewheel|scroll|clic |faire defiler|objet de (lord|vessel)|lie au compte|account bound)/;
@@ -72,13 +75,18 @@ function parseNumber(s) {
 
 const NUM = String.raw`[+-]?\d[\d\s  .,]*`;
 
+// Écart avec la pièce portée, ajouté par le jeu en fin de ligne : « (-956) », « (+40 %) »
+const DELTA = new RegExp(String.raw`\(\s*([+-]\s*\d[\d\s  .,]*)\s*%?\s*\)\s*$`);
+
 function parseValueLine(line) {
   const value = line.match(new RegExp(NUM));
   const range = line.match(new RegExp(String.raw`\[\s*(${NUM})\s*(?:-\s*(${NUM}))?\s*\]`));
+  const delta = line.match(DELTA);
   return {
     value: value ? parseNumber(value[0]) : null,
     min: range ? parseNumber(range[1]) : null,
     max: range ? parseNumber(range[2] ?? range[1]) : null,
+    delta: delta ? parseNumber(delta[1]) : null,
   };
 }
 
@@ -98,7 +106,7 @@ function parseItem(lines, matcher) {
     typeLine,
     slot,
     rarity,
-    ancestral: /\b(ancestral|ancestrale)\b/.test(t),
+    ancestral: ANCESTRAL.test(t),
     power: null,
     masterwork: null,
     implicits: [],
@@ -108,6 +116,8 @@ function parseItem(lines, matcher) {
     sockets: 0,
     runeword: null,
     lostWhenEquipped: [],
+    lost: [], // propriétés perdues quand équipé, lues comme des affixes
+    lostPower: false, // l'objet porté a un pouvoir légendaire / unique que celui-ci n'a pas
     hasComparison: false,
   };
 
@@ -152,6 +162,11 @@ function parseItem(lines, matcher) {
     if (section === "runeword" && !/^[+-]?\d/.test(line)) continue;
     if (section === "compare") {
       item.lostWhenEquipped.push(line);
+      if (!/\d/.test(line)) item.lostPower = item.lostPower || /pouvoir|power/.test(c);
+      else {
+        const m = matcher.matchLine(line);
+        item.lost.push({ text: line, key: m.score >= 0.5 ? m.key : null, score: m.score, ...parseValueLine(line) });
+      }
       continue;
     }
     if (section === "footer") continue;

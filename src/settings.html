@@ -73,6 +73,15 @@
   label.check { font: 14px/1.4 "Segoe UI", system-ui, sans-serif; letter-spacing: 0; text-transform: none; }
   .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
   .status { font: 12px var(--mono); margin-top: 8px; color: var(--muted); }
+  .list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .list .empty { color: var(--muted); font-size: 13px; }
+  .list h3 { margin: 10px 0 2px; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--txt); }
+  .item { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border-left: 2px solid var(--line2); background: rgba(255,255,255,.02); font-size: 13.5px; }
+  .item .k { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--a); white-space: nowrap; }
+  .item .t { flex: 1; min-width: 0; }
+  .item .m { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+  .item.err { border-left-color: #ff6b6b; color: #ff9b9b; }
+  .item button { padding: 2px 8px; }
   code { font: 12px var(--mono); color: var(--a); background: rgba(75,227,193,.07); padding: 1px 5px; }
   button { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; border-radius: 0; }
   button.ghost { background: transparent; color: var(--a); border: 1px solid var(--line2); padding: 7px 12px; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
@@ -125,6 +134,7 @@
     <button type="button" data-tab="overlay"><i>05</i>Overlay</button>
     <button type="button" data-tab="keys"><i>06</i>Raccourcis</button>
     <button type="button" data-tab="jeux"><i>07</i>Jeux</button>
+    <button type="button" data-tab="memoire"><i>08</i>Mémoire</button>
   </nav>
 
   <main>
@@ -216,6 +226,41 @@
       </div>
 
       <div class="group">
+        <h2>Vitesse</h2>
+        <label class="check"><input type="checkbox" id="fastLane"><span>Voie rapide : les questions courtes partent vers un modèle léger, sans recherche web</span></label>
+        <div class="hint">« C'est quoi cet objet ? », « faiblesse de ce boss ? » : premier mot en 1 à 2 s. Les analyses (build, stratégie, méta, patch, comparaison) gardent le moteur complet. La réponse est lue phrase par phrase dès qu'elle arrive.</div>
+        <div data-show="claude-cli">
+          <label>Modèle de la voie rapide</label>
+          <select id="claudeFastModel">
+            <option value="haiku">Haiku (très rapide)</option>
+            <option value="sonnet">Sonnet</option>
+          </select>
+        </div>
+        <div data-show="codex-cli">
+          <div class="two">
+            <div><label>Modèle de la voie rapide</label><input type="text" id="codexFastModel" placeholder="auto : le modèle rapide de Codex"></div>
+            <div><label>Effort de la voie rapide</label>
+              <select id="codexFastEffort">
+                <option value="low">Bas</option>
+                <option value="medium">Moyen</option>
+              </select></div>
+          </div>
+          <div class="hint">Vide = le modèle que Codex présente comme rapide (ex. gpt-6-luna) : ~3 s au lieu de ~10 s.</div>
+        </div>
+        <div data-show="anthropic-api">
+          <label>Modèle de la voie rapide</label>
+          <select id="anthropicFastModel">
+            <option value="claude-haiku-5-5">Claude Haiku 5.5 (très rapide)</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+          </select>
+        </div>
+        <div data-show="openai-api">
+          <label>Modèle de la voie rapide</label>
+          <input type="text" id="openaiFastModel" placeholder="même modèle">
+        </div>
+      </div>
+
+      <div class="group">
         <h2>Clés API (optionnel)</h2>
         <div class="two">
           <div><label>Clé Anthropic</label><input type="password" id="anthropicKey" placeholder="sk-ant-..."></div>
@@ -291,6 +336,8 @@
           <button class="ghost" id="refresh" type="button" title="Actualiser la liste">↻</button>
         </div>
         <div class="hint">Lance ton jeu en mode « fenêtré sans bordure » pour que l'overlay s'affiche par-dessus.</div>
+        <label class="check"><input type="checkbox" id="annotations"><span>Repères sur le jeu : l'IA peut entourer ou pointer un endroit (« clique ici », « l'entrée est là »)</span></label>
+        <div class="hint">Les repères restent 12 s ; le raccourci « Fermer » les efface.</div>
       </div>
     </section>
 
@@ -328,7 +375,7 @@
     <!-- Jeux -->
     <section class="panel" data-panel="jeux">
       <h1>Jeux<em>.</em></h1>
-      <p class="lead">GitGud reconnaît Deadlock et Diablo IV automatiquement.</p>
+      <p class="lead">GitGud reconnaît automatiquement les jeux qui ont un module : Deadlock et Diablo IV en profondeur, les autres grâce aux modules JSON ci-dessous.</p>
       <div class="group">
         <h2>Deadlock</h2>
         <div class="hint" style="margin-top:0">Statistiques en direct (méta, counters, objets) via deadlock-api.com.</div>
@@ -340,6 +387,31 @@
         <h2>Diablo IV</h2>
         <div class="hint" style="margin-top:0">Recherche orientée vers Maxroll, D4Builds et les notes de patch, avec sources citées. Builds (Mobalytics, Maxroll, D4Builds ou le tien), priorités, équipement et scan ont leur propre fenêtre.</div>
         <button type="button" class="ghost" id="openD4" style="margin-top:12px">Ouvrir le panneau Diablo IV</button>
+      </div>
+      <div class="group">
+        <h2>Modules de jeu</h2>
+        <div class="hint" style="margin-top:0">Un fichier JSON suffit pour ajouter un jeu : reconnaissance de la fenêtre, consignes, sites de référence, vocabulaire, minuteurs prêts à l'emploi, données en direct. Le format est décrit dans le fichier LISEZ-MOI du dossier.</div>
+        <div id="gameList" class="list"></div>
+        <div class="row" style="margin-top:12px">
+          <button type="button" class="ghost" id="openGames">Ouvrir le dossier des modules</button>
+          <button type="button" class="ghost" id="reloadGames">↻ Recharger</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mémoire -->
+    <section class="panel" data-panel="memoire">
+      <h1>Mémoire<em>.</em></h1>
+      <p class="lead">Ce que GitGud retient de toi d'une session à l'autre : objectifs, progression, difficultés qui reviennent, préférences. Tout reste sur ce PC.</p>
+      <div class="group">
+        <h2>Réglage</h2>
+        <label class="check"><input type="checkbox" id="memoryEnabled"><span>Retenir ce qui compte pour les prochaines sessions</span></label>
+        <div class="hint">L'IA note un fait quand tu en parles (« je vise le niveau 100 », « je meurs toujours contre ce boss »). Tu peux aussi lui dire « souviens-toi que… » ou « oublie que… ».</div>
+      </div>
+      <div class="group">
+        <h2>Souvenirs</h2>
+        <div id="memoryList" class="list"></div>
+        <button type="button" class="ghost small" id="memoryClear" style="margin-top:12px">Tout effacer</button>
       </div>
     </section>
   </main>

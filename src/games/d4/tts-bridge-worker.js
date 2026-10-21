@@ -27,14 +27,20 @@ const INVALID_HANDLE = -1n;
 
 const name = "\\\\.\\pipe\\d4lf";
 const buffer = Buffer.alloc(65536);
+const RETRY_MS = 3000;
+
+// Pause bloquante (ce thread ne fait que servir le tube)
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 function serve() {
   for (;;) {
     const pipe = CreateNamedPipeW(name, PIPE_ACCESS_INBOUND, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, 1, 0, 65536, 0, null);
     if (!pipe || koffi.address(pipe) === BigInt.asUintN(64, INVALID_HANDLE)) {
+      // Tube encore tenu (D4LF, ou instance précédente de l'app qui se ferme) : on réessaie
       const err = GetLastError();
       parentPort.postMessage({ type: "error", error: err === ERROR_PIPE_BUSY ? "busy" : `CreateNamedPipe ${err}` });
-      return;
+      sleep(RETRY_MS);
+      continue;
     }
     parentPort.postMessage({ type: "listening" });
     if (!ConnectNamedPipe(pipe, null) && GetLastError() !== ERROR_PIPE_CONNECTED) {

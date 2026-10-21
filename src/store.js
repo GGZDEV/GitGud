@@ -14,6 +14,14 @@ const DEFAULTS = {
   anthropicModel: "claude-opus-5-5",
   openaiModel: "gpt-5-mini",
   effort: "low", // Claude API : low = réponses rapides en jeu
+  fastLane: true, // questions courtes → modèle léger sans recherche web (voir src/fastlane.js)
+  claudeFastModel: "haiku", // voie rapide via Claude Code
+  codexFastModel: "", // voie rapide via Codex (vide = même modèle, sans recherche web)
+  codexFastEffort: "low",
+  anthropicFastModel: "claude-haiku-5-5",
+  openaiFastModel: "", // vide = même modèle, sans recherche web
+  memoryEnabled: true, // mémoire du joueur entre les sessions (locale)
+  annotations: true, // repères dessinés sur le jeu par l'IA
   mascot: "slime", // personnage = mascotte + ton + voix : slime | mech | wraith | wolf | lich | orc
   language: "auto",
   target: { id: "screen", name: "Écran entier" },
@@ -38,6 +46,7 @@ const DEFAULTS = {
   deadlockAccountId: "", // facultatif : historique de parties Deadlock
   d4ItemCard: true, // Diablo IV : fiche ✓ / ✗ à chaque objet survolé
   d4Hints: true, // Diablo IV : pastille ✓ / ✗ au survol des compétences et du Parangon
+  d4LaterVariants: true, // Diablo IV : objet utile à une autre variante (Endgame…) → « à garder »
   anthropicKey: "",
   openaiKey: "",
 };

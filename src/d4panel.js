@@ -286,11 +286,12 @@ async function loadEquipment() {
     ? equipment.map((r) => `
       <tr>
         <td><b>${esc(r.slotName)}</b></td>
-        <td>${esc(r.target || "—")}<div class="hint">${esc(r.wanted.join(" · "))}</div></td>
+        <td>${esc(r.target || "—")}<div class="hint">${esc(r.wanted.join(" · "))}</div>
+          ${(r.later || []).map((l) => `<div class="later"><b>↗ ${esc(l.variant)}</b> : ${esc(l.target || "—")}<div class="hint">${esc(l.wanted.join(" · "))}</div></div>`).join("")}</td>
         <td>${r.item ? `${esc(r.item.name)}<div class="hint">${esc(r.item.typeLine)}${r.item.power ? " · " + r.item.power : ""}</div>` : '<span class="muted">non synchronisé</span>'}</td>
         <td>${r.verdict ? `<span class="v v-${r.verdict.level}">${esc(r.verdict.text)}</span>` : ""}
           ${r.aspect ? `<div class="${r.aspect.has ? "ok" : "ko"}">${r.aspect.has ? "✓" : "✗"} ${esc(r.aspect.label)}</div>` : ""}
-          ${r.checks.map((c) => `<div class="${c.wanted ? "ok" : "muted"}">${c.wanted ? "✓" : "✗"} ${esc(c.text.replace(/\s*\[[^\]]*\]\s*%?/g, " "))}</div>`).join("")}
+          ${r.checks.map((c) => `<div class="${c.wanted ? "ok" : c.useful ? "" : "muted"}">${c.wanted ? "✓" : c.useful ? "~" : "✗"} ${esc(c.text.replace(/\s*\[[^\]]*\]\s*%?/g, " "))}${c.useful ? ' <span class="muted">(utile au build)</span>' : ""}</div>`).join("")}
           ${r.item && r.missing.length ? `<div class="hint">Manque : ${esc(r.missing.join(" · "))}</div>` : ""}</td>
       </tr>`).join("")
     : '<tr><td colspan="4" class="muted">Importe un build pour comparer ton équipement.</td></tr>';
@@ -311,6 +312,10 @@ $("sync").onclick = async () => {
 $("calib").onclick = () => window.api.invoke("d4:calibrate");
 $("card").onchange = () => window.api.invoke("d4:settings", { d4ItemCard: $("card").checked });
 $("hints").onchange = () => window.api.invoke("d4:settings", { d4Hints: $("hints").checked });
+$("later").onchange = async () => {
+  await window.api.invoke("d4:settings", { d4LaterVariants: $("later").checked });
+  if (document.querySelector("#tab-equip.on")) loadEquipment();
+};
 
 // ---------- Démarrage et mises à jour en direct ----------
 window.api.on("d4:summary", (s) => {
@@ -324,6 +329,7 @@ window.api.on("d4:status", async () => render(await window.api.invoke("d4:summar
   const st = await window.api.invoke("d4:settings");
   $("card").checked = st.d4ItemCard;
   $("hints").checked = st.d4Hints;
+  $("later").checked = st.d4LaterVariants;
   $("scanInfo").textContent = `Scan : touche ${st.scanKey} (inventaire ouvert). Le 1er appui lance le calibrage. Échap pour arrêter. Modifiable dans Paramètres → Raccourcis.`;
   affixChoices = await window.api.invoke("d4:affix-choices");
   $("affixList").innerHTML = affixChoices.map((c) => `<option value="${esc(c.label)}">`).join("");

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
 <style>
+  #stage { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; }
   html, body { margin: 0; background: transparent; overflow: hidden; font: 600 13px "Segoe UI", sans-serif; }
   /* Repère posé sur une case de l'inventaire après un scan */
   .m { position: absolute; width: 26px; height: 26px; margin: -38px 0 0 10px; border-radius: 50%; display: grid; place-items: center;
@@ -14,6 +15,7 @@
   .m.meh { background: #b45309; color: #f59e0b; }
   .m.bad { background: #b91c1c; color: #ef4444; opacity: .85; }
   .m.neutral { background: #475569; color: #94a3b8; opacity: .7; }
+  .m.later { background: #7c3aed; color: #a78bfa; }
   .m.calib { background: #7c3aed; color: #a78bfa; width: 12px; height: 12px; margin: -6px 0 0 -6px; }
   @keyframes pop { from { transform: scale(.3); opacity: 0; } }
 
@@ -25,14 +27,41 @@
   #hint .in { clip-path: inherit; background: rgba(8,12,16,.94); padding: 7px 12px 8px; }
   #hint .t { font: 700 15px/1.25 "Bahnschrift SemiCondensed", "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .02em; color: var(--c); }
   #hint .s { font: 400 11.5px/1.35 "Cascadia Mono", Consolas, monospace; color: #9fb0ba; margin-top: 3px; }
+  /* Annotations de l'IA : cercle pulsé ou flèche, avec un libellé, couleurs de l'overlay */
+  .an { position: absolute; pointer-events: none; --c: #4be3c1; }
+  .an .ring { position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--c);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.55), inset 0 0 0 2px rgba(0,0,0,.35); animation: ring 1.2s ease-out infinite; }
+  .an .dot { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
+  .an svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .an .lbl { position: absolute; white-space: nowrap; padding: 4px 10px 5px; background: rgba(8,12,16,.92); color: var(--c); border: 1.5px solid var(--c);
+    font: 700 14px/1.2 "Bahnschrift SemiCondensed", "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .03em;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); animation: pop .25s ease-out both; }
+  .an:nth-child(2) { --c: #a78bfa; } .an:nth-child(3) { --c: #facc15; }
+  @keyframes ring { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.35); opacity: .15; } }
+
   #hint.top { --c: #4ade80; } #hint.good { --c: #4be3c1; } #hint.meh { --c: #fbbf24; } #hint.bad { --c: #ff5d73; } #hint.neutral { --c: #7d8b96; }
 </style>
 </head>
 <body>
+<div id="stage">
 <div id="markers"></div>
+<div id="annotations"></div>
 <div id="hint"><div class="in"><div class="t"></div><div class="s"></div></div></div>
+</div>
 <script>
-  const ICON = { top: "★", good: "✓", meh: "~", bad: "✗", neutral: "·", calib: "" };
+  // La fenêtre ne couvre qu'une partie de l'écran : les éléments sont placés en coordonnées de
+  // l'écran, puis la scène est décalée de la position de la fenêtre.
+  const stage = document.getElementById("stage");
+  let screenW = innerWidth, screenH = innerHeight;
+  window.api.on("origin", (o) => {
+    screenW = o.width;
+    screenH = o.height;
+    stage.style.width = o.width + "px";
+    stage.style.height = o.height + "px";
+    stage.style.transform = `translate(${-o.x}px, ${-o.y}px)`;
+  });
+
+  const ICON = { top: "★", good: "✓", later: "↗", meh: "~", bad: "✗", neutral: "·", calib: "" };
   const box = document.getElementById("markers");
   window.api.on("markers", (cells) => {
     box.innerHTML = "";
@@ -48,6 +77,52 @@
     });
   });
 
+  // Annotations : la flèche arrive du côté du centre de l'écran, le libellé se place à son départ
+  const annot = document.getElementById("annotations");
+  const SVG = "http://www.w3.org/2000/svg";
+  window.api.on("annotations", (list) => {
+    annot.innerHTML = "";
+    for (const a of list || []) {
+      const el = document.createElement("div");
+      el.className = "an";
+      el.style.left = a.x + "px";
+      el.style.top = a.y + "px";
+      const lbl = document.createElement("div");
+      lbl.className = "lbl";
+      lbl.textContent = a.label || "";
+      if (a.shape === "arrow") {
+        const cx = screenW / 2 - a.x, cy = screenH / 2 - a.y;
+        const len = Math.hypot(cx, cy) || 1;
+        const dx = (cx / len) * 110, dy = (cy / len) * 110; // départ de la flèche
+        const ux = -dx / 110, uy = -dy / 110; // direction vers la cible
+        const tip = { x: -ux * 8, y: -uy * 8 };
+        const svg = document.createElementNS(SVG, "svg");
+        const head = `${tip.x},${tip.y} ${tip.x - ux * 18 - uy * 10},${tip.y - uy * 18 + ux * 10} ${tip.x - ux * 18 + uy * 10},${tip.y - uy * 18 - ux * 10}`;
+        svg.innerHTML =
+          `<line x1="${dx}" y1="${dy}" x2="${tip.x - ux * 14}" y2="${tip.y - uy * 14}" stroke="rgba(0,0,0,.6)" stroke-width="8" stroke-linecap="round"/>` +
+          `<line x1="${dx}" y1="${dy}" x2="${tip.x - ux * 14}" y2="${tip.y - uy * 14}" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>` +
+          `<polygon points="${head}" fill="currentColor" stroke="rgba(0,0,0,.6)" stroke-width="2"/>`;
+        svg.style.color = "var(--c)";
+        el.appendChild(svg);
+        el.appendChild(lbl);
+        requestAnimationFrame(() => {
+          lbl.style.left = dx - (dx < 0 ? lbl.offsetWidth : 0) + "px";
+          lbl.style.top = dy - lbl.offsetHeight / 2 + "px";
+        });
+      } else {
+        el.innerHTML = '<div class="ring"></div><div class="dot"></div>';
+        el.appendChild(lbl);
+        requestAnimationFrame(() => {
+          const right = a.x + 40 + lbl.offsetWidth < screenW - 8;
+          lbl.style.left = (right ? 36 : -36 - lbl.offsetWidth) + "px";
+          lbl.style.top = -lbl.offsetHeight / 2 + "px";
+        });
+      }
+      if (!a.label) lbl.style.display = "none";
+      annot.appendChild(el);
+    }
+  });
+
   // Pastille : sous le curseur, décalée à droite ; repliée à gauche / au-dessus près des bords
   const hint = document.getElementById("hint");
   window.api.on("hint", (h) => {
@@ -61,8 +136,8 @@
     const hgt = hint.offsetHeight;
     let x = h.x + 18;
     let y = h.y + 26;
-    if (x + w > innerWidth - 8) x = h.x - w - 18;
-    if (y + hgt > innerHeight - 8) y = h.y - hgt - 18;
+    if (x + w > screenW - 8) x = h.x - w - 18;
+    if (y + hgt > screenH - 8) y = h.y - hgt - 18;
     hint.style.left = Math.max(8, x) + "px";
     hint.style.top = Math.max(8, y) + "px";
   });

@@ -1,0 +1,10 @@
+{
+  "id": "path-of-exile-2",
+  "name": "Path of Exile 2",
+  "version": "1",
+  "author": "GitGud",
+  "description": "Builds, gemmes, artisanat et arbre passif ; la méta change à chaque ligue.",
+  "match": ["path\\s*of\\s*exile\\s*2", "\\bpoe\\s*2\\b"],
+  "guidance": "La méta et les mécaniques changent à chaque ligue et patch : vérifie la ligue en cours avant de conseiller un build. Pour un objet visible à l'écran, dis s'il vaut la peine d'être gardé, vendu ou utilisé pour l'artisanat.",
+  "sources": ["poe2wiki.net", "maxroll.gg/poe2", "mobalytics.gg/poe-2", "poe2db.tw"]
+}

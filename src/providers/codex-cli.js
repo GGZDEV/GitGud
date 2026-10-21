@@ -8,6 +8,22 @@ const path = require("path");
 const readline = require("readline");
 const { getBins } = require("../setup/detect");
 
+// Modèle « rapide » de la liste de Codex (ex. « Fast and affordable model »), le plus récent :
+// premier mot en ~3 s au lieu de ~10 s. Les noms changent souvent, d'où la lecture du cache.
+let fastModelCache;
+function fastModel() {
+  if (fastModelCache !== undefined) return fastModelCache;
+  fastModelCache = "";
+  try {
+    const home = process.env.CODEX_HOME || path.join(require("os").homedir(), ".codex");
+    const data = JSON.parse(fs.readFileSync(path.join(home, "models_cache.json"), "utf8"));
+    const list = data.models || data.data || data;
+    const fast = list.find((m) => m.visibility !== "hide" && /\b(fast|rapide)\b/i.test(m.description || "") && !/older|previous/i.test(m.description || ""));
+    fastModelCache = fast?.slug || "";
+  } catch {}
+  return fastModelCache;
+}
+
 class CodexCli {
   constructor(workDir) {
     this.workDir = workDir;
@@ -26,7 +42,11 @@ class CodexCli {
     this.stop();
   }
 
-  async chat({ settings, system, history, question, imageJpegB64, onDelta }) {
+  // fast : voie rapide (sans recherche web, effort minimal)
+  async chat({ settings, system, history, question, imageJpegB64, onDelta, fast = false }) {
+    const effort = fast ? settings.codexFastEffort || "minimal" : settings.codexEffort || "low";
+    const webSearch = !fast && settings.webSearch;
+    const model = (fast && (settings.codexFastModel || fastModel())) || settings.codexModel;
     this.stop();
     const { codex: bin } = await getBins();
     if (!bin) throw new Error("Codex est introuvable. Relance l'assistant de configuration.");
@@ -47,10 +67,10 @@ class CodexCli {
       "-s", "read-only",
       "-C", this.workDir,
       "-c", `model_instructions_file=${toml(instructions)}`,
-      "-c", `model_reasoning_effort="${settings.codexEffort || "low"}"`,
-      "-c", `web_search="${settings.webSearch ? "live" : "disabled"}"`,
+      "-c", `model_reasoning_effort="${effort}"`,
+      "-c", `web_search="${webSearch ? "live" : "disabled"}"`,
     ];
-    if (settings.codexModel) args.push("-m", settings.codexModel);
+    if (model) args.push("-m", model);
     if (imageJpegB64) {
       const img = path.join(this.workDir, "capture.jpg");
       fs.writeFileSync(img, Buffer.from(imageJpegB64, "base64"));

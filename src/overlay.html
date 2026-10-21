@@ -54,6 +54,17 @@
   @keyframes wv { from { height: 3px; } to { height: 14px; } }
   @keyframes blink { 50% { opacity: .25; } }
 
+  /* Minuteurs : pastilles discrètes sous l'en-tête, clic = annuler */
+  #timers { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; }
+  #timers:empty { display: none; }
+  .timer { all: unset; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; font: 600 11px var(--mono); letter-spacing: .04em; color: #9fb0ba;
+    border: 1px solid rgba(75,227,193,.22); padding: 3px 9px; clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px); }
+  .timer span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .timer b { color: var(--a); font-variant-numeric: tabular-nums; }
+  .timer:hover { border-color: var(--err); } .timer:hover b { color: var(--err); }
+  .timer.soon b { color: var(--scan); animation: blink .8s infinite; }
+  body.compact #timers { padding: 8px 10px 0; }
+
   /* Niveau du micro */
   #meter { display: none; align-items: flex-end; gap: 3px; height: 28px; margin: 12px 14px 0; }
   #meter.on { display: flex; }
@@ -85,9 +96,16 @@
   .d4-verdict { margin: 6px 0 8px; padding: 3px 9px; font: 600 11.5px var(--mono); letter-spacing: .05em; display: inline-block; }
   .v-top { background: rgba(34,197,94,.18); color: #4ade80; } .v-good { background: rgba(163,230,53,.15); color: #bef264; }
   .v-meh { background: rgba(245,158,11,.15); color: #fbbf24; } .v-bad { background: rgba(239,68,68,.15); color: #f87171; } .v-neutral { background: rgba(148,163,184,.12); color: var(--muted); }
-  .d4-row { display: grid; grid-template-columns: 16px 1fr 46px; gap: 6px; align-items: center; font-size: 13.5px; padding: 2px 0; color: var(--txt); }
+  .v-later { background: rgba(139,92,246,.18); color: #c4b5fd; }
+  .d4-later { margin: -2px 0 8px; padding: 4px 9px; font-size: 12.5px; color: #ddd6fe; border-left: 2px solid var(--b); background: rgba(139,92,246,.08); }
+  .d4-later b { color: #c4b5fd; } .d4-later span { color: var(--muted); font: 11px var(--mono); }
+  .d4-later-i { color: #c4b5fd; font-weight: 700; }
+  .d4-row { display: grid; grid-template-columns: 16px 1fr auto 46px; gap: 6px; align-items: center; font-size: 13.5px; padding: 2px 0; color: var(--txt); }
   .d4-row.no { color: var(--muted); }
-  .d4-ok { color: #4ade80; font-weight: 700; } .d4-ko { color: #f87171; }
+  .d4-ok { color: #4ade80; font-weight: 700; } .d4-ko { color: #f87171; } .d4-mid { color: #fbbf24; font-weight: 700; }
+  .d4-tag { font: 10px var(--mono); color: var(--muted); margin-left: 4px; }
+  .d4-d { font: 10.5px var(--mono); text-align: right; white-space: nowrap; } .d4-d.up { color: #4ade80; } .d4-d.down { color: #f87171; } .d4-d.new { color: var(--muted); }
+  .d4-cmp { margin-top: 6px; font-size: 12px; line-height: 1.35; } .d4-cmp .up { color: #4ade80; } .d4-cmp .down { color: #f87171; }
   .d4-bar { height: 5px; background: rgba(255,255,255,.08); overflow: hidden; }
   .d4-bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #4ade80); }
   .d4-star { color: #fbbf24; }
@@ -130,13 +148,14 @@
   <div id="wrap"><div id="card"><div class="in">
     <div class="top"><span>GITGUD // ASSIST <span id="pin">· ÉPINGLÉ</span></span><span id="ver">ONLINE</span></div>
     <header id="handle" title="Glisser pour déplacer">
-      <div class="hex"><div class="slot"><div id="mascot"></div></div></div>
+      <div class="hex"><div class="slot"><div id="mascot" class="lite"></div></div></div>
       <div class="ident">
         <div id="name">KIN<em>.</em></div>
         <div id="context"></div>
       </div>
       <div id="chip"><div class="lbl" id="status">[ PRÊT ]</div><span class="wave"><i></i><i></i><i></i><i></i><i></i></span></div>
     </header>
+    <div id="timers"></div>
     <div id="meter"></div>
     <div id="d4card"></div>
     <div id="log"></div>

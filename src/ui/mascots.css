@@ -74,6 +74,12 @@
 .mascot.driven.listening::before { animation: none; opacity: calc(.45 + var(--level, 0) * 1.2); transform: scale(calc(1 + var(--level, 0) * .7)); transition: transform .06s linear, opacity .06s linear; }
 .mascot.driven.listening .breathe { animation: none; transform: translateY(calc(var(--level, 0) * -4px)); }
 
+/* Mode léger (overlay en jeu, classe « lite ») : immobile au repos, et pas de flou ni de lueur
+   (drop-shadow), coûteux à redessiner. Elle ne s'anime que quand elle écoute, réfléchit ou parle. */
+.mascot.lite::before, .mascot.lite .gc, .mascot.lite .go, .mascot.lite .gv { filter: none; }
+.mascot.lite.idle *, .mascot.lite.idle::before { animation: none !important; }
+.mascot.lite.listening .gc, .mascot.lite.listening .go, .mascot.lite.listening .gv { animation: none; }
+
 /* Grille de choix de la mascotte (paramètres, assistant) */
 .mascot-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .mp-tile { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 9px; cursor: pointer; text-align: center; outline: none;

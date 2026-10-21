@@ -49,6 +49,31 @@ const SCENES = [
     events: () => [["d4-item", require("../build/d4/card-payload.json")]],
   },
   {
+    file: "9-voie-rapide",
+    mascot: "slime",
+    events: [["user-text", "Faiblesse de ce boss ?"], ["lane", "fast"], ["state", "thinking"]],
+  },
+  {
+    file: "10-minuteurs",
+    mascot: "orc",
+    events: () => [
+      ["timers", [{ id: 1, label: "Roshan", endsAt: Date.now() + 452000, seconds: 480 }, { id: 2, label: "Aegis", endsAt: Date.now() + 8000, seconds: 300 }]],
+      ["user-text", "lance rosh"],
+      ["assistant-done", "⏱ Roshan : 8 min."],
+      ["state", "idle"],
+    ],
+  },
+  {
+    file: "11-reperes",
+    page: "d4-markers.html",
+    size: { width: 960, height: 540 },
+    events: [["annotations", [
+      { x: 700, y: 140, label: "Entrée", shape: "circle" },
+      { x: 260, y: 400, label: "Levier", shape: "arrow" },
+      { x: 860, y: 470, label: "Coffre", shape: "circle" },
+    ]]],
+  },
+  {
     file: "5-zenith-erreur",
     mascot: "wraith",
     events: [["state", "idle"], ["error", "Codex n'est pas connecté. Reconnecte-toi depuis l'assistant de configuration."]],
@@ -67,14 +92,13 @@ app.whenReady().then(async () => {
   for (const scene of SCENES) {
     mascot = scene.mascot || "slime";
     const win = new BrowserWindow({
-      width: 440,
-      height: 520,
+      ...(scene.size || { width: 440, height: 520 }),
       // Une fenêtre cachée ne se repeint pas : on l'affiche hors de l'écran.
       x: -3000, y: 0, skipTaskbar: true,
       backgroundColor: "#1d2a24", // fond « jeu » sombre pour juger le contraste
       webPreferences: { preload: path.join(__dirname, "..", "preload.js"), backgroundThrottling: false },
     });
-    await win.loadFile(path.join(__dirname, "..", "src", "overlay.html"));
+    await win.loadFile(path.join(__dirname, "..", "src", scene.page || "overlay.html"));
     await wait(300);
     if (scene.config) win.webContents.send("config", scene.config);
     const events = typeof scene.events === "function" ? scene.events() : scene.events;

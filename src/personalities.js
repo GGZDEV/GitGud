@@ -75,23 +75,43 @@ const LANG_NAMES = {
   pt: "portugais",
 };
 
-function buildSystemPrompt(mascotId, language, targetName) {
+// Le prompt système ne dépend que du personnage, de la langue et des options : il reste
+// identique d'une question à l'autre, ce qui garde Claude Code lancé à l'avance. Le jeu en
+// cours, la mémoire et la taille de la capture arrivent avec chaque question.
+// features : { memory, annotations, timers }
+function buildSystemPrompt(mascotId, language, features = {}) {
   const p = PERSONALITIES[mascotId] || PERSONALITIES.slime;
   const lang =
     language === "auto"
       ? "Réponds dans la langue utilisée par le joueur."
       : `Réponds toujours en ${LANG_NAMES[language] || language}.`;
-  return `Tu es un assistant IA pour jeux PC (et logiciels) affiché dans un overlay pendant que l'utilisateur joue. Fenêtre observée : « ${targetName} ».
+
+  const tags = [];
+  if (features.memory) {
+    tags.push(
+      `- Mémoire : quand le joueur révèle quelque chose d'utile pour les prochaines sessions (objectif, progression, difficulté qui revient, préférence), ajoute à la toute fin <memo type="objectif|progression|difficulte|preference|info">fait court, à la 3e personne</memo>. Au plus une balise par réponse, et seulement pour du durable : pas pour une question ponctuelle. S'il te demande d'oublier quelque chose : <forget>le fait</forget>. Si le bloc « Ce que tu sais déjà du joueur » montre une difficulté qui revient, tu peux le lui faire remarquer avec tact.`,
+    );
+  }
+  if (features.annotations) {
+    tags.push(
+      `- Repères à l'écran : si montrer un endroit de la capture aide vraiment (où cliquer, où aller, quel objet, quel ennemi), ajoute <mark x="…" y="…" label="2-3 mots" shape="circle|arrow"/> avec les coordonnées en pixels de la capture jointe (sa taille est indiquée avec la question). 3 repères au plus, jamais sans capture, et ta phrase doit rester compréhensible sans eux.`,
+    );
+  }
+  if (features.timers) {
+    tags.push(`- Minuteur : si le joueur veut être prévenu plus tard (réapparition, cooldown, buff), ajoute <timer seconds="…" label="2-3 mots"/>.`);
+  }
+
+  return `Tu es GitGud, un assistant IA pour jeux PC (et logiciels) affiché dans un overlay pendant que l'utilisateur joue. Le jeu ou la fenêtre observée est indiqué avec chaque question.
 
 Règles :
-- Ta réponse est souvent lue à voix haute : 1 à 3 phrases courtes, pas de markdown, pas de listes à puces sauf si on te demande des étapes.
+- Ta réponse est souvent lue à voix haute : 1 à 3 phrases courtes, pas de markdown, pas de listes à puces sauf si on te demande des étapes. Commence directement par l'essentiel : ta première phrase est lue pendant que tu écris la suite.
 - Si une capture d'écran est jointe, identifie d'abord le jeu et la situation visible, puis base ta réponse dessus. Ne décris pas l'écran si on ne te le demande pas.
 - Pour les builds, patchs, méta, tier lists, chiffres précis ou soluces : utilise la recherche web si elle est disponible plutôt que ta mémoire, car les jeux évoluent vite.
 - Si tu n'es pas sûr, dis-le en une phrase plutôt que d'inventer.
 - Pour guider dans une interface, indique précisément où se trouve l'élément (zone de l'écran, nom du bouton, icône).
 - Tu ne contrôles pas le jeu : tu conseilles uniquement.
-- - ${lang}
-
+- ${lang}
+${tags.length ? `\nBalises (invisibles pour le joueur, retirées de l'affichage et de la voix ; à placer en fin de réponse) :\n${tags.join("\n")}\n` : ""}
 Ton personnage (le plus important pour la forme, jamais pour les faits) :
 ${p.style}
 Exemple de réplique typique : « ${p.sample} »

@@ -1,0 +1,896 @@
+{
+ "note": "Build Swarm Spiritborn (variante Endgame, Mobalytics) et objets réels vus en jeu, pour scripts/d4-eval-test.js",
+ "variant": {
+  "id": "7",
+  "name": "Endgame",
+  "slots": [
+   {
+    "slot": "helm",
+    "slotName": "Casque",
+    "kind": "unique",
+    "title": "Harmony of Ebewaka",
+    "titleFr": "Harmonie d’Ebewaka",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": true,
+      "masterwork": true,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "maximum-life",
+      "key": "Hitpoints_Max_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Maximum de vie augmenté de",
+      "keys": [
+       "Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus_Item",
+       "Flat_Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus",
+       "Warlock_GreaterDemonPet_MaxHealth_Bonus",
+       "Flat_Hitpoints_Max_Bonus_Unscaled_By_Player_Health"
+      ],
+      "must": []
+     },
+     {
+      "slug": "armor",
+      "key": "Armor_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "à l’armure",
+      "keys": [
+       "Armor_Bonus",
+       "Armor_Percent"
+      ],
+      "must": []
+     },
+     {
+      "slug": "cooldown-reduction",
+      "key": "Power_Cooldown_Reduction_Percent_All",
+      "greater": false,
+      "masterwork": false,
+      "label": "% de réduction du temps de recharge",
+      "keys": [
+       "Power_Cooldown_Reduction_Percent_All",
+       "Skill_Tag_Cooldown_Reduction_Percent",
+       "Power_Cooldown_Reduction_Percent",
+       "Ultimate_Cooldown_Reduction#Ultimate_Gem",
+       "S14_Mythic_CooldownReductionCDR"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-endurance-maximum-resolve-stacks",
+      "key": "MaxStacks#Spiritborn_Gorilla_Passive",
+      "greater": true,
+      "masterwork": false,
+      "label": "au maximum de cumuls de détermination",
+      "keys": [
+       "MaxStacks#Spiritborn_Gorilla_Passive"
+      ],
+      "must": []
+     }
+    ],
+    "gems": [
+     "emerald",
+     "emerald"
+    ]
+   },
+   {
+    "slot": "chest-armor",
+    "slotName": "Torse",
+    "kind": "aspect",
+    "title": "Aspect of Glynn's Anvil",
+    "titleFr": "Aspect de l’enclume de Glynn",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": false,
+      "masterwork": false,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "maximum-life",
+      "key": "Hitpoints_Max_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Maximum de vie augmenté de",
+      "keys": [
+       "Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus_Item",
+       "Flat_Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus",
+       "Warlock_GreaterDemonPet_MaxHealth_Bonus",
+       "Flat_Hitpoints_Max_Bonus_Unscaled_By_Player_Health"
+      ],
+      "must": []
+     },
+     {
+      "slug": "armor",
+      "key": "Armor_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "à l’armure",
+      "keys": [
+       "Armor_Bonus",
+       "Armor_Percent"
+      ],
+      "must": []
+     },
+     {
+      "slug": "ranks-to-counterattack",
+      "key": null,
+      "greater": true,
+      "masterwork": true,
+      "label": "Rangs de Contre-attaque",
+      "terms": [
+       "rang"
+      ],
+      "anyOf": [
+       "contre attaque",
+       "counterattack"
+      ]
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-endurance-maximum-life",
+      "key": null,
+      "greater": true,
+      "masterwork": false,
+      "label": "Worldly Endurance Maximum Life"
+     }
+    ],
+    "gems": [
+     "eth",
+     "lo"
+    ],
+    "aspectFr": "de l’enclume de Glynn",
+    "aspectForms": [
+     "de l’enclume de Glynn"
+    ]
+   },
+   {
+    "slot": "gloves",
+    "slotName": "Gants",
+    "kind": "aspect",
+    "title": "Aspect of Pestilence",
+    "titleFr": "Aspect de pestilence",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": false,
+      "masterwork": false,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "vulnerable-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts contre les cibles vulnérables : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "damage-over-time-multiplier",
+      "key": "Bucketed_Multiplicative_DoT_Damage",
+      "greater": true,
+      "masterwork": true,
+      "label": "Multiplicateur de dégâts sur la durée : x%",
+      "keys": [
+       "Bucketed_Multiplicative_DoT_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "all-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de tous les dégâts : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Damage",
+       "Gem_DamageType_All_Bonus"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-finesse-damage-over-time",
+      "key": "DOT_DPS_Bonus_Percent",
+      "greater": true,
+      "masterwork": false,
+      "label": "% aux dégâts sur la durée",
+      "keys": [
+       "DOT_DPS_Bonus_Percent"
+      ],
+      "must": []
+     }
+    ],
+    "gems": [],
+    "aspectFr": "de pestilence",
+    "aspectForms": [
+     "de pestilence"
+    ]
+   },
+   {
+    "slot": "pants",
+    "slotName": "Jambières",
+    "kind": "aspect",
+    "title": "Aspect of Apprehension",
+    "titleFr": "Aspect d’appréhension",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": true,
+      "masterwork": true,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "maximum-life",
+      "key": "Hitpoints_Max_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Maximum de vie augmenté de",
+      "keys": [
+       "Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus_Item",
+       "Flat_Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus",
+       "Warlock_GreaterDemonPet_MaxHealth_Bonus",
+       "Flat_Hitpoints_Max_Bonus_Unscaled_By_Player_Health"
+      ],
+      "must": []
+     },
+     {
+      "slug": "armor",
+      "key": "Armor_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "à l’armure",
+      "keys": [
+       "Armor_Bonus",
+       "Armor_Percent"
+      ],
+      "must": []
+     },
+     {
+      "slug": "resistance-to-all-elements",
+      "key": "Resistance_All",
+      "greater": false,
+      "masterwork": false,
+      "label": "de résistance à tous les éléments",
+      "keys": [
+       "Resistance_All",
+       "Resistance_All_Bonus",
+       "Resistance_All_Bonus_Percent"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-endurance-maximum-life",
+      "key": null,
+      "greater": true,
+      "masterwork": false,
+      "label": "Worldly Endurance Maximum Life"
+     }
+    ],
+    "gems": [
+     "yul",
+     "kry"
+    ],
+    "aspectFr": "d’appréhension",
+    "aspectForms": [
+     "d’appréhension"
+    ]
+   },
+   {
+    "slot": "boots",
+    "slotName": "Bottes",
+    "kind": "aspect",
+    "title": "Exploiter's Aspect",
+    "titleFr": "Aspect d’abus",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": false,
+      "masterwork": false,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "maximum-life",
+      "key": "Hitpoints_Max_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Maximum de vie augmenté de",
+      "keys": [
+       "Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus_Item",
+       "Flat_Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus",
+       "Warlock_GreaterDemonPet_MaxHealth_Bonus",
+       "Flat_Hitpoints_Max_Bonus_Unscaled_By_Player_Health"
+      ],
+      "must": []
+     },
+     {
+      "slug": "armor",
+      "key": "Armor_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "à l’armure",
+      "keys": [
+       "Armor_Bonus",
+       "Armor_Percent"
+      ],
+      "must": []
+     },
+     {
+      "slug": "movement-speed",
+      "key": "Movement_Bonus_Run_Speed",
+      "greater": true,
+      "masterwork": false,
+      "label": "% à la vitesse de déplacement",
+      "keys": [
+       "Movement_Bonus_Run_Speed",
+       "Movement_Speed_Bonus_Percent_Per_Power"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "natural-motion-movement-speed",
+      "key": null,
+      "greater": true,
+      "masterwork": true,
+      "label": "Natural Motion Movement Speed"
+     }
+    ],
+    "gems": [],
+    "aspectFr": "d’abus",
+    "aspectForms": [
+     "d’abus"
+    ]
+   },
+   {
+    "slot": "weapon",
+    "slotName": "Arme",
+    "kind": "unique",
+    "title": "Infinity (Polearm)",
+    "titleFr": null,
+    "affixes": [
+     {
+      "slug": "movement-speed",
+      "key": "Movement_Bonus_Run_Speed",
+      "greater": false,
+      "masterwork": false,
+      "label": "% à la vitesse de déplacement",
+      "keys": [
+       "Movement_Bonus_Run_Speed",
+       "Movement_Speed_Bonus_Percent_Per_Power"
+      ],
+      "must": []
+     },
+     {
+      "slug": "maximum-life",
+      "key": "Hitpoints_Max_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Maximum de vie augmenté de",
+      "keys": [
+       "Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus_Item",
+       "Flat_Hitpoints_Max_Bonus",
+       "Hitpoints_Max_Percent_Bonus",
+       "Warlock_GreaterDemonPet_MaxHealth_Bonus",
+       "Flat_Hitpoints_Max_Bonus_Unscaled_By_Player_Health"
+      ],
+      "must": []
+     },
+     {
+      "slug": "damage-over-time-multiplier",
+      "key": "Bucketed_Multiplicative_DoT_Damage",
+      "greater": true,
+      "masterwork": true,
+      "label": "Multiplicateur de dégâts sur la durée : x%",
+      "keys": [
+       "Bucketed_Multiplicative_DoT_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "poison-damage-multiplier",
+      "key": "Gem_DamageType_Poison_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts de poison : x%",
+      "keys": [
+       "Gem_DamageType_Poison_Bonus",
+       "Bucketed_Multiplicative_Damage_Type",
+       "Bucketed_Multiplicative_DoT_Damage",
+       "Bucketed_Multiplicative_Damage",
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+       "Bucketed_Multiplicative_Crit_Damage",
+       "Gem_DamageType_Shadow_Bonus",
+       "Gem_DamageType_All_Bonus",
+       "Gem_DamageType_Cold_Bonus",
+       "Gem_DamageType_HolyFire_Bonus",
+       "Gem_DamageType_Physical_Bonus",
+       "Gem_DamageType_Lightning_Bonus",
+       "Bucketed_Multiplicative_Damage_Type_FireHoly"
+      ],
+      "must": [
+       "poison",
+       "poison"
+      ]
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-finesse-damage-over-time",
+      "key": "DOT_DPS_Bonus_Percent",
+      "greater": true,
+      "masterwork": false,
+      "label": "% aux dégâts sur la durée",
+      "keys": [
+       "DOT_DPS_Bonus_Percent"
+      ],
+      "must": []
+     }
+    ],
+    "gems": [
+     "emerald",
+     "emerald"
+    ]
+   },
+   {
+    "slot": "amulet",
+    "slotName": "Amulette",
+    "kind": "aspect",
+    "title": "Aspect of Infestation",
+    "titleFr": "Aspect d’infestation",
+    "affixes": [
+     {
+      "slug": "vulnerable-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts contre les cibles vulnérables : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "damage-over-time-multiplier",
+      "key": "Bucketed_Multiplicative_DoT_Damage",
+      "greater": true,
+      "masterwork": true,
+      "label": "Multiplicateur de dégâts sur la durée : x%",
+      "keys": [
+       "Bucketed_Multiplicative_DoT_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "all-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de tous les dégâts : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Damage",
+       "Gem_DamageType_All_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "ranks-to-all-skills",
+      "key": "Skill_Rank_All_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "points à toutes les compétences",
+      "keys": [
+       "Skill_Rank_All_Bonus"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-endurance-maximum-resolve-stacks",
+      "key": "MaxStacks#Spiritborn_Gorilla_Passive",
+      "greater": true,
+      "masterwork": false,
+      "label": "au maximum de cumuls de détermination",
+      "keys": [
+       "MaxStacks#Spiritborn_Gorilla_Passive"
+      ],
+      "must": []
+     }
+    ],
+    "gems": [
+     "splinter-of-hellfire"
+    ],
+    "aspectFr": "d’infestation",
+    "aspectForms": [
+     "d’infestation"
+    ]
+   },
+   {
+    "slot": "ring-1",
+    "slotName": "Anneau 1",
+    "kind": "aspect",
+    "title": "Aspect of Supremacy",
+    "titleFr": "Aspect de supériorité",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": false,
+      "masterwork": false,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "vulnerable-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts contre les cibles vulnérables : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "damage-over-time-multiplier",
+      "key": "Bucketed_Multiplicative_DoT_Damage",
+      "greater": true,
+      "masterwork": true,
+      "label": "Multiplicateur de dégâts sur la durée : x%",
+      "keys": [
+       "Bucketed_Multiplicative_DoT_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "poison-damage-multiplier",
+      "key": "Gem_DamageType_Poison_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts de poison : x%",
+      "keys": [
+       "Gem_DamageType_Poison_Bonus",
+       "Bucketed_Multiplicative_Damage_Type",
+       "Bucketed_Multiplicative_DoT_Damage",
+       "Bucketed_Multiplicative_Damage",
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+       "Bucketed_Multiplicative_Crit_Damage",
+       "Gem_DamageType_Shadow_Bonus",
+       "Gem_DamageType_All_Bonus",
+       "Gem_DamageType_Cold_Bonus",
+       "Gem_DamageType_HolyFire_Bonus",
+       "Gem_DamageType_Physical_Bonus",
+       "Gem_DamageType_Lightning_Bonus",
+       "Bucketed_Multiplicative_Damage_Type_FireHoly"
+      ],
+      "must": [
+       "poison",
+       "poison"
+      ]
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-stability-cooldown-reduction",
+      "key": null,
+      "greater": true,
+      "masterwork": false,
+      "label": "Worldly Stability Cooldown Reduction"
+     }
+    ],
+    "gems": [
+     "splinter-of-sin"
+    ],
+    "aspectFr": "de supériorité",
+    "aspectForms": [
+     "de supériorité"
+    ]
+   },
+   {
+    "slot": "ring-2",
+    "slotName": "Anneau 2",
+    "kind": "unique",
+    "title": "Ring of Writhing Moon",
+    "titleFr": "Anneau de la lune agonisante",
+    "affixes": [
+     {
+      "slug": "dexterity",
+      "key": "Dexterity",
+      "greater": false,
+      "masterwork": false,
+      "label": "dextérité",
+      "keys": [
+       "Dexterity",
+       "Dexterity_Core",
+       "Dexterity_Total",
+       "Dexterity_Percent_Bonus"
+      ],
+      "must": []
+     },
+     {
+      "slug": "poison-damage-multiplier",
+      "key": "Gem_DamageType_Poison_Bonus",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts de poison : x%",
+      "keys": [
+       "Gem_DamageType_Poison_Bonus",
+       "Bucketed_Multiplicative_Damage_Type",
+       "Bucketed_Multiplicative_DoT_Damage",
+       "Bucketed_Multiplicative_Damage",
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+       "Bucketed_Multiplicative_Crit_Damage",
+       "Gem_DamageType_Shadow_Bonus",
+       "Gem_DamageType_All_Bonus",
+       "Gem_DamageType_Cold_Bonus",
+       "Gem_DamageType_HolyFire_Bonus",
+       "Gem_DamageType_Physical_Bonus",
+       "Gem_DamageType_Lightning_Bonus",
+       "Bucketed_Multiplicative_Damage_Type_FireHoly"
+      ],
+      "must": [
+       "poison",
+       "poison"
+      ]
+     },
+     {
+      "slug": "vulnerable-damage-multiplier",
+      "key": "Bucketed_Multiplicative_Vulnerable_Health_Damage",
+      "greater": false,
+      "masterwork": false,
+      "label": "Multiplicateur de dégâts contre les cibles vulnérables : x%",
+      "keys": [
+       "Bucketed_Multiplicative_Vulnerable_Health_Damage"
+      ],
+      "must": []
+     },
+     {
+      "slug": "damage-over-time-multiplier",
+      "key": "Bucketed_Multiplicative_DoT_Damage",
+      "greater": true,
+      "masterwork": true,
+      "label": "Multiplicateur de dégâts sur la durée : x%",
+      "keys": [
+       "Bucketed_Multiplicative_DoT_Damage"
+      ],
+      "must": []
+     }
+    ],
+    "tempering": [
+     {
+      "slug": "worldly-stability-cooldown-reduction",
+      "key": null,
+      "greater": true,
+      "masterwork": false,
+      "label": "Worldly Stability Cooldown Reduction"
+     }
+    ],
+    "gems": [
+     "splinter-of-the-black-soulstone"
+    ]
+   }
+  ]
+ },
+ "equipped": {
+  "gloves": [
+   "GANTS D’AVENTURE DE PESTILENCE",
+   "Gants ancestraux légendaires",
+   "Puissance de l’objet : 900",
+   "801 Armure",
+   "+2 750 points de vie maximum",
+   "+9,5 % à la vitesse d’attaque [8,0 - 10,0] %",
+   "Multiplicateur de dégâts de poison : x18 % [14 - 24] %",
+   "6,5 % de réduction du coût en ressources [6,0 - 7,0] %",
+   "+63 % aux dégâts sur la durée",
+   "Gravé : Les essaims pestilentiels infligent 34 %[x] [30 - 60] % de dégâts supplémentaires, durent 50 % plus longtemps et s’étendent vers l’extérieur.",
+   "Niveau 70 requis. Lié au compte. Objet de Vessel of Hatred",
+   "Prix de vente : 20 704 Or",
+   "Durabilité : 100/100. Trempes : 5/5"
+  ],
+  "amulet": [
+   "ÉCHO DE KWATLI",
+   "Amulette unique",
+   "Puissance de l’objet : 850",
+   "157 Toutes les résistances",
+   "+149 dextérité +[125 - 149]",
+   "+1 718 points de vie maximum [1 526 - 1 830]",
+   "Multiplicateur de dégâts contre les cibles vulnérables : x25 % [16 - 28] %",
+   "+2 046 de résistance aux dégâts physiques [1 800 - 2 274]",
+   "+37 % aux dégâts sur la durée [30 - 50] %",
+   "Vous infligez 88 %[x] [80 - 100] % de dégâts supplémentaires aux adversaires vulnérables.. Lorsque vous rendez une cible vulnérable, la prochaine fois que vous lui infligez des dégâts directs :. vous récupérez 5 % de votre maximum de points de vie ;. vous générez 10 points de vigueur ;. vous annulez l’effet de vulnérabilité.",
+   "« Frappez une première fois pour découvrir un point faible, puis frappez de nouveau pour en tirer parti. ». – Enseignements d’Ysevete, première sacresprit",
+   "Niveau 70 requis. Lié au compte. uniquement. Objet unique équipé. Objet de Vessel of Hatred",
+   "Prix de vente : 144 513 Or",
+   "Trempes : 1/1",
+   "Sélectionner",
+   "Ajouter aux favoris"
+  ],
+  "chest-armor": [
+   "BARRIÈRE DU MAGUS",
+   "Cuirasse rare",
+   "Puissance de l’objet : 850",
+   "2 231 Armure",
+   "+1 849 à l’armure [1 561 - 1 962]",
+   "+13,5 % à la génération de barrière [10,0 - 15,0] %",
+   "+1 923 de résistance aux dégâts de froid [1 800 - 2 274]",
+   "+1 402 points de vie maximum [1 000 - 1 500]",
+   "CirKry (300/300) – Déchaînement de léthargie",
+   "Vous lancez 5 compétences, puis l’épuisement vous gagne pendant 3 s.  (1 fois). Vous invoquez la compétence Vortex des sacresprits, qui inflige des dégâts aux adversaires et les attire vers vous. . (puissance débordante : Taille augmentée jusqu’à 100 %)",
+   "Niveau 70 requis. Lié au compte. Objet de Lord of Hatred",
+   "Prix de vente : 10 228 Or",
+   "Durabilité : 100/100. Trempes : 1/1",
+   "Molette souris vers le bas",
+   "Faire défiler vers le bas",
+   "Bouton droit de la souris"
+  ]
+ },
+ "items": {
+  "strangulateurs": [
+   "STRANGULATEURS ANTAGONISTES",
+   "Gants rares",
+   "Puissance de l’objet : 850",
+   "638 Armure (Robustesse : -6,7 %)",
+   "+1 794 points de vie maximum [1 526 - 1 830] (-956)",
+   "+214 à la régénération de vie [183 - 220] (+214)",
+   "+247 points de vie par coup [219 - 263] (+247)",
+   "Multiplicateur de dégâts critiques : x40 % [26 - 50] % (+40 %)",
+   "Propriétés perdues quand équipé :",
+   "6,5 % de réduction du coût en ressources",
+   "Multiplicateur de dégâts de poison : x18 %",
+   "+9,5 % à la vitesse d’attaque",
+   "+63 % aux dégâts sur la durée",
+   "Pouvoir légendaire",
+   "Niveau 70 requis",
+   "Prix de vente : 13 381 Or",
+   "Durabilité : 100/100. Trempes : 1/1"
+  ],
+  "oeillet": [
+   "ŒILLET MORTIFÈRE DU CRÉPUSCULE",
+   "Amulette légendaire",
+   "Puissance de l’objet : 850",
+   "157 Toutes les résistances (Robustesse : -3,1 %)",
+   "+127 dextérité +[125 - 149] (-22)",
+   "+1 579 points de vie maximum [1 526 - 1 830] (-139)",
+   "Multiplicateur de dégâts de foudre : x19 % [14 - 24] % (+19 %)",
+   "+2 044 de résistance aux dégâts de froid [1 800 - 2 274] (+2 044)",
+   "Lorsque vous infligez des dégâts avec une compétence de base, vous recevez 4 % de vitesse d’attaque supplémentaire pendant 10 s, jusqu’à un maximum de 5 fois. Une fois ce seuil atteint, vous sombrez dans une rage de sang vampirique et obtenez un bonus de 63 %[x] [60 - 75] % aux dégâts des compétences de base et de 15 % à la vitesse de déplacement pendant 10 s.",
+   "Propriétés perdues quand équipé :",
+   "+2 046 de résistance aux dégâts physiques",
+   "Multiplicateur de dégâts contre les cibles vulnérables : x25 %",
+   "+37 % aux dégâts sur la durée",
+   "Pouvoir unique",
+   "Niveau 70 requis",
+   "Déverrouille un nouvel aspect dans le codex de puissance au recyclage.",
+   "Prix de vente : 37 466 Or",
+   "Trempes : 3/3"
+  ],
+  "blouse": [
+   "BLOUSE DE MORVEUSE",
+   "Cuirasse unique",
+   "Puissance de l’objet : 850",
+   "2 231 Armure (Robustesse : -15,8 %)",
+   "+93 dextérité +[83 - 99] (+93)",
+   "+10,5 % à la génération de barrière [10,0 - 15,0] % (-3,0 %)",
+   "+2 203 de résistance aux dégâts de froid [1 800 - 2 274] (+280)",
+   "+50 % de taux d’apparition de l’or +[50 - 100] % (+50 %)",
+   "Tant que vous ne subissez pas de dégâts, vous infligez jusqu’à 35 %[x] [35 - 50] % de dégâts supplémentaires, mais les attaques adverses vous infligent également jusqu’à 50 % de dégâts en plus. Cet effet est réinitialisé lorsque l’adversaire vous touche.",
+   "Propriétés perdues quand équipé :",
+   "+1 849 à l’armure",
+   "+1 402 points de vie maximum",
+   "Châsse (2)",
+   "À première vue, ce vêtement semble être la simple blouse d’une gamine des rues, ornée d’un pendentif en pierre grossièrement taillée. Mais l’intérieur est doublé de poches dissimulées et de mystérieux fourreaux. À l’arrière du pendentif, on peut lire un mot runique ancien : « Kantwirt. »",
+   "Niveau 70 requis. Objet unique équipé",
+   "Prix de vente : 112 399 Or",
+   "Durabilité : 100/100. Trempes : 1/1"
+  ],
+  "haubert": [
+   "HAUBERT RUNIQUE DE LA GARDE SEPTENTRIONALE",
+   "Cuirasse légendaire",
+   "Puissance de l’objet : 850",
+   "2 231 Armure (Robustesse : -10,5 %)",
+   "+83 dextérité +[83 - 99] (+83)",
+   "+1 019 points de vie maximum [1 016 - 1 225] (-383)",
+   "+814 d’épines [611 - 916] (+814)",
+   "+1 959 de résistance aux dégâts de froid [1 800 - 2 274] (+36)",
+   "Les blocages ont 33 % [25 - 40] % de chances de geler l’adversaire qui attaque pendant 3 s.",
+   "Propriétés perdues quand équipé :",
+   "+1 849 à l’armure",
+   "+13,5 % à la génération de barrière",
+   "Châsse (2)",
+   "Niveau 70 requis. Objet de Lord of Hatred",
+   "Prix de vente : 32 114 Or",
+   "Durabilité : 100/100. Trempes : 3/3",
+   "Les cibles gelées ne peuvent ni bouger ni attaquer. Vous pouvez geler des adversaires en les glaçant plusieurs fois de suite."
+  ],
+  "harnois": [
+   "HARNOIS DE SEIGNEUR DE GUERRE DE CRUEL AUGURE",
+   "Cuirasse légendaire",
+   "Puissance de l’objet : 850",
+   "2 231 Armure (Robustesse : -18,1 %)",
+   "+88 dextérité +[83 - 99] (+88)",
+   "+829 d’épines [611 - 916] (+829)",
+   "+1 984 de résistance aux dégâts de feu [1 800 - 2 274] (+1 984)",
+   "5,0 % de réduction du coût en ressources [4,0 - 6,0] % (+5,0 %)",
+   "Lorsque vous utilisez une compétence d’incarnation, les adversaires autour de vous deviennent vulnérables pendant 5 s. Si vous tuez une cible vulnérable, 82 % [70 - 88] % des dégâts du coup fatal se répercutent sur une autre cible à proximité.",
+   "Propriétés perdues quand équipé :",
+   "+1 923 de résistance aux dégâts de froid",
+   "+1 849 à l’armure",
+   "+13,5 % à la génération de barrière",
+   "+1 402 points de vie maximum",
+   "Châsse (2)",
+   "Niveau 70 requis. Objet de Vessel of Hatred",
+   "Améliore un aspect dans le codex de puissance au recyclage.",
+   "Prix de vente : 32 114 Or",
+   "Durabilité : 100/100. Trempes : 3/3",
+   "Les adversaires vulnérables subissent 20 % de dégâts supplémentaires."
+  ]
+ }
+}

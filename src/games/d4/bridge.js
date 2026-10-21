@@ -37,7 +37,12 @@ class D4Bridge extends EventEmitter {
       if (m.type === "disconnected") this.setStatus("listening");
       if (m.type === "error") this.setStatus(m.error === "busy" ? "busy" : "error", m.error);
     });
-    this.worker.on("error", (err) => this.setStatus("error", err.message));
+    this.worker.on("error", (err) => {
+      // Thread du tube tombé : on le relance (sinon plus aucune infobulle jusqu'au redémarrage)
+      this.setStatus("error", err.message);
+      this.worker = null;
+      setTimeout(() => this.status !== "off" && this.start(), 3000);
+    });
   }
 
   stop() {

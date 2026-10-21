@@ -1,0 +1,14 @@
+{
+  "id": "baldurs-gate-3",
+  "name": "Baldur's Gate 3",
+  "version": "1",
+  "author": "GitGud",
+  "description": "Combats au tour par tour, dialogues, compagnons et choix à conséquences.",
+  "match": ["baldur'?s\\s*gate\\s*(3|iii)", "\\bbg3\\b"],
+  "guidance": "Le jeu suit les règles de D&D 5e. Pour un combat, raisonne en actions, actions bonus, positionnement, terrain en hauteur et surfaces. Pour un choix de dialogue, signale les conséquences sur les compagnons et les quêtes sans gâcher l'histoire, sauf si le joueur le demande.",
+  "sources": ["bg3.wiki"],
+  "glossary": { "DD": "degré de difficulté d'un jet", "JS": "jet de sauvegarde", "CA": "classe d'armure" },
+  "keywords": [
+    { "when": "spoil|divulg", "say": "Le joueur accepte les révélations sur l'histoire pour cette question." }
+  ]
+}

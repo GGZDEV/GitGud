@@ -1,0 +1,19 @@
+{
+  "id": "dota-2",
+  "name": "Dota 2",
+  "version": "1",
+  "author": "GitGud",
+  "description": "Objets, matchups, timings et minuteurs Roshan / Aegis.",
+  "match": ["^dota\\s*2\\b"],
+  "guidance": "Pour les objets, tiens compte des héros adverses visibles à l'écran. Les chiffres (timings, dégâts) changent souvent : appuie-toi sur le patch en cours.",
+  "sources": ["liquipedia.net/dota2", "dota2.fandom.com", "dotabuff.com"],
+  "facts": [
+    "Après sa mort, Roshan réapparaît entre 8 et 11 minutes plus tard (à vérifier selon le patch).",
+    "L'Aegis disparaît 5 minutes après avoir été ramassée."
+  ],
+  "timers": [
+    { "name": "Roshan", "aliases": ["rosh", "roshan min"], "seconds": 480 },
+    { "name": "Roshan max", "aliases": ["rosh max"], "seconds": 660 },
+    { "name": "Aegis", "aliases": ["egis", "égide"], "seconds": 300 }
+  ]
+}

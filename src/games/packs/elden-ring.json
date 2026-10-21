@@ -1,0 +1,14 @@
+{
+  "id": "elden-ring",
+  "name": "Elden Ring",
+  "version": "1",
+  "author": "GitGud",
+  "description": "Boss, builds, quêtes de PNJ et localisation des objets (jeu de base et Shadow of the Erdtree).",
+  "match": ["elden\\s*ring"],
+  "guidance": "Les quêtes de PNJ se ratent facilement : préviens si une action risque de bloquer une quête. Pour une localisation, donne la région, le site de grâce le plus proche et la direction. Utilise les noms français officiels.",
+  "sources": ["eldenring.wiki.fextralife.com", "fr.wikipedia.org"],
+  "glossary": { "PC": "points de concentration", "FP": "points de concentration", "grâce": "site de grâce (point de sauvegarde)", "runes": "monnaie et expérience" },
+  "keywords": [
+    { "when": "boss|battre|tuer|vaincre", "say": "Pour un boss : faiblesses (élément, statut), attaques dangereuses à esquiver, cendres de guerre ou invocations utiles, et niveau conseillé." }
+  ]
+}

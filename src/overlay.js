@@ -15,7 +15,7 @@ const STATUS = {
   thinking: "[ SCAN ]",
   speaking: "[ OUTPUT ]",
 };
-const PENDING = { thinking: "scan en cours", transcribing: "transcription" };
+const PENDING = { thinking: "scan en cours", transcribing: "transcription", fast: "⚡ réponse rapide" };
 
 let config = { mascot: "slime", autoHideSeconds: 20, context: "" };
 let state = "idle";
@@ -25,6 +25,9 @@ let chunks = [];
 let audio = null;
 let hideTimer = null;
 let meterStop = null;
+let lane = "deep"; // "fast" : voie rapide (modèle léger)
+let clips = []; // phrases déjà synthétisées, lues à la suite
+let streaming = false; // d'autres phrases peuvent encore arriver
 
 // ---------- Apparence ----------
 
@@ -98,7 +101,8 @@ function showPending(on) {
       log.appendChild(el);
       log.scrollTop = log.scrollHeight;
     }
-    el.innerHTML = (PENDING[state] || PENDING.thinking) + "<i></i><i></i><i></i>";
+    const what = state === "thinking" && lane === "fast" ? PENDING.fast : PENDING[state] || PENDING.thinking;
+    el.innerHTML = what + "<i></i><i></i><i></i>";
   } else if (!on && el) {
     el.remove();
   }
@@ -106,7 +110,7 @@ function showPending(on) {
 
 function setState(s) {
   // La voix continue après la fin de la réponse : on reste « En direct » jusqu'au bout.
-  if (s === "idle" && (speechSynthesis.speaking || (audio && !audio.paused && !audio.ended))) return;
+  if (s === "idle" && (speechSynthesis.speaking || streaming || clips.length || (audio && !audio.paused && !audio.ended))) return;
   state = s;
   showPending(s === "thinking" || s === "transcribing");
   chip.className = s;
@@ -140,6 +144,10 @@ function showError(message) {
 }
 
 window.api.on("state", setState);
+window.api.on("lane", (l) => {
+  lane = l;
+  if (state === "thinking") showPending(true);
+});
 window.api.on("user-text", (t) => {
   addMsg("user", t);
   current = null;
@@ -180,7 +188,10 @@ window.api.on("assistant-done", (t) => {
   }
   current = null;
 });
-window.api.on("error", showError);
+window.api.on("error", (m) => {
+  streaming = false;
+  showError(m);
+});
 
 // Petite information discrète qui disparaît seule (ex. rien entendu).
 window.api.on("notice", (message) => {
@@ -212,6 +223,23 @@ async function toPcm16k(blob) {
   return (await off.startRendering()).getChannelData(0);
 }
 
+// Mode léger : les animations pilotées par le son sont mises à jour à 30 i/s au plus
+// (requestAnimationFrame tourne à la fréquence de l'écran).
+const FRAME_MS = 1000 / 30;
+function throttledLoop(step) {
+  let raf;
+  let last = 0;
+  const loop = (now) => {
+    if (now - last >= FRAME_MS - 1) {
+      last = now;
+      step();
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  return () => cancelAnimationFrame(raf);
+}
+
 // Barres de niveau du micro pendant l'écoute.
 function startMeter(stream) {
   const ctx = new AudioContext();
@@ -220,7 +248,6 @@ function startMeter(stream) {
   ctx.createMediaStreamSource(stream).connect(analyser);
   const data = new Uint8Array(analyser.frequencyBinCount);
   const bars = [...meter.children];
-  let raf;
   const draw = () => {
     analyser.getByteFrequencyData(data);
     bars.forEach((b, i) => (b.style.height = 4 + (data[i + 1] / 255) * 24 + "px"));
@@ -228,13 +255,12 @@ function startMeter(stream) {
     let sum = 0;
     for (let i = 1; i < 12; i++) sum += data[i];
     mascotEl.style.setProperty("--level", Math.min(1, sum / 11 / 160).toFixed(3));
-    raf = requestAnimationFrame(draw);
   };
   meter.classList.add("on");
   mascotEl.classList.add("driven");
-  draw();
+  const stopLoop = throttledLoop(draw);
   return () => {
-    cancelAnimationFrame(raf);
+    stopLoop();
     ctx.close();
     meter.classList.remove("on");
     mascotEl.classList.remove("driven");
@@ -278,28 +304,53 @@ window.api.on("ptt-stop", () => {
 // ---------- Voix ----------
 
 function stopAudio() {
+  clips = [];
+  streaming = false;
   mouthStop?.();
   if (audio) {
+    audio.onended = null;
     audio.pause();
     audio = null;
   }
   speechSynthesis.cancel();
 }
 
-window.api.on("tts-audio", ({ data, type, pitch }) => {
-  stopAudio();
-  audio = new Audio(URL.createObjectURL(new Blob([data], { type })));
-  if (pitch && pitch !== 1) {
-    audio.preservesPitch = false; // voix plus aiguë ou plus grave selon le personnage
-    audio.playbackRate = pitch;
-  }
-  audio.onended = () => {
+// Lecture en flux : les phrases arrivent une à une pendant que la réponse s'écrit.
+function playNext() {
+  if (audio && !audio.paused && !audio.ended) return;
+  const clip = clips.shift();
+  if (!clip) {
+    audio = null;
     mouthStop?.();
-    setState("idle");
+    if (!streaming) setState("idle");
+    return;
+  }
+  const el = new Audio(URL.createObjectURL(new Blob([clip.data], { type: clip.type })));
+  if (clip.pitch && clip.pitch !== 1) {
+    el.preservesPitch = false; // voix plus aiguë ou plus grave selon le personnage
+    el.playbackRate = clip.pitch;
+  }
+  el.onended = () => {
+    URL.revokeObjectURL(el.src);
+    mouthStop?.();
+    audio = null;
+    playNext();
   };
+  audio = el;
   setState("speaking");
-  mouthStop = driveMouth(audio);
-  audio.play();
+  mouthStop = driveMouth(el);
+  el.play().catch(() => el.onended());
+}
+
+window.api.on("tts-chunk", (clip) => {
+  streaming = true;
+  clips.push(clip);
+  playNext();
+});
+
+window.api.on("tts-end", () => {
+  streaming = false;
+  if (!audio && !clips.length && !speechSynthesis.speaking) setState("idle");
 });
 
 // La bouche de la mascotte suit le volume réel de la voix (synchronisation labiale simple).
@@ -313,19 +364,17 @@ function driveMouth(el) {
   src.connect(analyser);
   analyser.connect(ctx.destination);
   const data = new Uint8Array(analyser.fftSize);
-  let raf;
   const tick = () => {
     analyser.getByteTimeDomainData(data);
     let sum = 0;
     for (const v of data) sum += (v - 128) * (v - 128);
     const rms = Math.sqrt(sum / data.length) / 128;
     mascotEl.style.setProperty("--talk", (0.4 + Math.min(1, rms * 5) * 1.6).toFixed(2));
-    raf = requestAnimationFrame(tick);
   };
   mascotEl.classList.add("driven");
-  tick();
+  const stopLoop = throttledLoop(tick);
   return () => {
-    cancelAnimationFrame(raf);
+    stopLoop();
     ctx.close();
     mascotEl.classList.remove("driven");
     mouthStop = null;
@@ -333,8 +382,8 @@ function driveMouth(el) {
 }
 
 // Voix Windows installées (gratuites, hors ligne).
-window.api.on("tts-system", ({ text, voice, language, pitch, rate }) => {
-  stopAudio();
+window.api.on("tts-system", ({ text, voice, language, pitch, rate, queue }) => {
+  if (!queue) stopAudio(); // en flux : les phrases s'enchaînent dans la file de la voix Windows
   const u = new SpeechSynthesisUtterance(text);
   u.pitch = pitch ?? 1;
   u.rate = rate ?? 1;
@@ -342,7 +391,7 @@ window.api.on("tts-system", ({ text, voice, language, pitch, rate }) => {
   const lang = language && language !== "auto" ? language : (navigator.language || "fr").slice(0, 2);
   u.voice = voices.find((v) => v.name === voice) || voices.find((v) => v.lang.startsWith(lang)) || null;
   if (u.voice) u.lang = u.voice.lang;
-  u.onend = () => setState("idle");
+  u.onend = () => !speechSynthesis.pending && setState("idle");
   setState("speaking");
   speechSynthesis.speak(u);
 });
@@ -366,4 +415,64 @@ askInput.addEventListener("keydown", (e) => {
     askForm.style.display = "none";
     window.api.send("text:cancel");
   }
+});
+
+// ---------- Minuteurs ----------
+
+const timersEl = $("timers");
+let timerList = [];
+
+function fmt(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = String(t % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+
+function renderTimers() {
+  const now = Date.now();
+  for (const t of timerList) {
+    const el = timersEl.querySelector(`[data-id="${t.id}"]`);
+    if (!el) continue;
+    const left = t.endsAt - now;
+    el.querySelector("b").textContent = fmt(left);
+    el.classList.toggle("soon", left < 10000);
+  }
+}
+
+window.api.on("timers", (list) => {
+  timerList = list;
+  timersEl.innerHTML = "";
+  for (const t of list) {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "timer";
+    el.dataset.id = t.id;
+    el.title = "Cliquer pour annuler";
+    el.append("⏱ ", Object.assign(document.createElement("span"), { textContent: t.label }), " ", document.createElement("b"));
+    el.onclick = () => window.api.send("timer:cancel", t.id);
+    timersEl.appendChild(el);
+  }
+  renderTimers();
+});
+setInterval(() => timerList.length && renderTimers(), 250);
+
+// Échéance : petit signal sonore (la mascotte l'annonce aussi à voix haute)
+window.api.on("timer-fire", () => {
+  try {
+    const ctx = new AudioContext();
+    [0, 0.18].forEach((at) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.15);
+      o.connect(g).connect(ctx.destination);
+      o.start(ctx.currentTime + at);
+      o.stop(ctx.currentTime + at + 0.16);
+    });
+    setTimeout(() => ctx.close(), 600);
+  } catch {}
 });

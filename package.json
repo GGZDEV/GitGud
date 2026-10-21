@@ -1,12 +1,13 @@
 {
   "name": "gitgud",
-  "version": "0.7.1",
+  "version": "0.7.6",
   "description": "Assistant IA open source pour jeux PC (voix + vision) : abonnement ChatGPT/Claude ou clés API, Whisper local",
   "main": "main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
     "smoke": "electron scripts/smoke-test.js",
+    "test": "node scripts/core-test.js && node scripts/d4-eval-test.js",
     "dist": "electron-builder --win nsis --config electron-builder.config.js",
     "dist:full": "node scripts/prepare-models.js && electron-builder --win nsis --config electron-builder.full.js",
     "detect": "electron scripts/detect-test.js",

@@ -32,7 +32,17 @@ function getOpenAI(key) {
 
 // history : [{ role: "user" | "assistant", text }] — texte uniquement (vision éphémère :
 // seule la question en cours porte la capture).
-async function chat({ settings, system, history, question, imageJpegB64, onDelta }) {
+// fast : voie rapide (modèle léger, sans recherche web)
+async function chat({ settings, system, history, question, imageJpegB64, onDelta, fast = false }) {
+  if (fast) {
+    settings = {
+      ...settings,
+      webSearch: false,
+      effort: "low",
+      anthropicModel: settings.anthropicFastModel || "claude-haiku-5-5",
+      openaiModel: settings.openaiFastModel || settings.openaiModel,
+    };
+  }
   if (settings.provider === "openai-api") {
     return chatOpenAI({ settings, system, history, question, imageJpegB64, onDelta });
   }

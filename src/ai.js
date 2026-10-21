@@ -18,15 +18,18 @@ class AI {
   // onProgress({ kind: "whisper" | "voice", file, progress }) : avancement des téléchargements
   constructor(dataDir, onProgress = () => {}, bundledModelsDir) {
     this.claudeCli = new ClaudeCli(path.join(dataDir, "claude-workdir"));
+    this.claudeFast = new ClaudeCli(path.join(dataDir, "claude-workdir")); // voie rapide : process séparé, déjà lancé
     this.codexCli = new CodexCli(path.join(dataDir, "codex-workdir"));
     this.whisper = new LocalWhisper(path.join(dataDir, "models"), (p) => onProgress({ kind: "whisper", ...p }), bundledModelsDir);
     const voiceDirs = [bundledModelsDir && path.join(bundledModelsDir, "piper"), path.join(dataDir, "voices")].filter(Boolean);
     this.tts = new LocalTTS(voiceDirs, (p) => onProgress({ kind: "voice", ...p }));
   }
 
+  // opts.fast : voie rapide (modèle léger, sans recherche web)
   chat(opts) {
     switch (opts.settings.provider) {
       case "claude-cli":
+        if (opts.fast) return this.claudeFast.chat({ ...opts, ...this.fastClaude(opts.settings) });
         return this.claudeCli.chat(opts);
       case "codex-cli":
         return this.codexCli.chat(opts);
@@ -35,9 +38,23 @@ class AI {
     }
   }
 
+  fastClaude(settings) {
+    return { model: settings.claudeFastModel || "haiku", webSearch: false };
+  }
+
+  // Lance Claude Code à l'avance (voie normale et voie rapide) : la première question
+  // n'attend plus son démarrage. Sans effet pour les autres moteurs.
+  prewarm(settings, system) {
+    if (settings.provider !== "claude-cli") return;
+    const warm = (cli, opts) => cli.warm({ system, ...opts }).catch((err) => console.warn("Claude Code :", err.message));
+    warm(this.claudeCli, { model: settings.claudeCliModel, webSearch: settings.webSearch });
+    if (settings.fastLane !== false) warm(this.claudeFast, this.fastClaude(settings));
+  }
+
   // Coupe une réponse en cours et oublie le contexte gardé par les CLI.
   reset() {
     this.claudeCli.reset();
+    this.claudeFast.reset();
     this.codexCli.reset();
   }
 

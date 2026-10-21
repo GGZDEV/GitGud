@@ -41,8 +41,28 @@ function requiredTerms(slug, dict) {
   return null;
 }
 
-function convertStats(stats, matcher, dict) {
+// Caractéristique principale de chaque classe (« damageAttribute » des données du jeu)
+const MAIN_STAT = {
+  Barbarian: "strength", Paladin: "strength", Sorcerer: "intelligence", Necromancer: "intelligence",
+  Druid: "willpower", Warlock: "willpower", Rogue: "dexterity", Spiritborn: "dexterity",
+};
+const isMainStatSlug = (slug) => /^(primary-)?(core|main)-stat(s)?$|^primary-stat$/.test(slug || "");
+
+// « Primary Core Stat » des guides → la vraie caractéristique de la classe (Volonté pour le Démoniste)
+function mainStatAffix(className, matcher, base = {}) {
+  const stat = MAIN_STAT[className];
+  if (!stat) return null;
+  const m = matcher.matchSlug(stat);
+  if (!m.key) return null;
+  return { slug: base.slug || "primary-core-stat", key: m.key, keys: m.keys, must: [], greater: !!base.greater, masterwork: !!base.masterwork, label: `${matcher.label(m.key)} (caractéristique principale)` };
+}
+
+function convertStats(stats, matcher, dict, className) {
   return (stats || []).filter(Boolean).map((s) => {
+    if (isMainStatSlug(s.id)) {
+      const main = mainStatAffix(className, matcher, { slug: s.id, greater: s.isGreater, masterwork: s.isMasterwork });
+      if (main) return main;
+    }
     const special = requiredTerms(s.id, dict);
     const m = special ? { key: null } : matcher.matchSlug(s.id);
     return {
@@ -67,10 +87,16 @@ function findAspect(title, dict) {
   return Object.values(dict.aspects || {}).find((a) => norm(a.en) === t || (a.enPrefix && norm(a.enPrefix) === t)) || null;
 }
 
-function convertSlot(slot, matcher, dict) {
+// Nom français d'un objet nommé (unique, charme d'ensemble, pouvoir…) d'après son nom anglais
+function findNamed(title, dict) {
+  const t = clean(title);
+  return t ? Object.values(dict.uniques || {}).find((u) => clean(u.en) === t && u.fr) || null : null;
+}
+
+function convertSlot(slot, matcher, dict, className) {
   const e = slot.gameEntity || {};
   const mods = e.modifiers || {};
-  const unique = e.type === "uniqueItems" ? Object.values(dict.uniques).find((u) => clean(u.en) === clean(e.title)) : null;
+  const unique = e.type !== "aspects" ? findNamed(e.title, dict) : null;
   const aspect = e.type === "aspects" ? findAspect(e.title, dict) : null;
   return {
     slot: slot.gameSlotSlug,
@@ -80,8 +106,8 @@ function convertSlot(slot, matcher, dict) {
     titleFr: unique?.fr || (aspect ? `Aspect ${aspect.fr}` : null),
     aspectFr: aspect?.fr || null,
     aspectForms: aspect?.frForms || null,
-    affixes: convertStats(mods.gearStats, matcher, dict),
-    tempering: convertStats(mods.temperingStats, matcher, dict),
+    affixes: convertStats(mods.gearStats, matcher, dict, className),
+    tempering: convertStats(mods.temperingStats, matcher, dict, className),
     gems: (mods.socketStats || []).filter(Boolean).map((g) => g.slug),
   };
 }
@@ -122,7 +148,7 @@ async function importMobalytics(url, matcher, dict) {
     variants: data.buildVariants.values.map((v) => ({
       id: v.id,
       name: titles[v.id] || v.name || `Variante ${v.id}`,
-      slots: (v.genericBuilder?.slots || []).map((s) => convertSlot(s, matcher, dict)),
+      slots: (v.genericBuilder?.slots || []).map((s) => convertSlot(s, matcher, dict, className)),
       priority: (v.equipmentPriorityList || []).map((p) => ({
         slug: p.slug,
         slot: p.type,
@@ -330,7 +356,17 @@ function refreshBuildKeys(build, matcher) {
         const aspect = findAspect(slot.title, matcher.dict);
         if (aspect) Object.assign(slot, { aspectFr: aspect.fr, aspectForms: aspect.frForms, titleFr: `Aspect ${aspect.fr}` });
       }
+      // Charmes d'ensemble, pouvoirs… importés sans nom français
+      if (slot.kind !== "aspect" && slot.title && !slot.titleFr) {
+        const named = findNamed(slot.title, matcher.dict);
+        if (named) slot.titleFr = named.fr;
+      }
       for (const a of [...slot.affixes, ...slot.tempering]) {
+        if (isMainStatSlug(a.slug) && !a.key) {
+          const main = mainStatAffix(build.className, matcher, a);
+          if (main) Object.assign(a, main);
+          continue;
+        }
         if (a.terms || a.manual || a.keys?.length > 1) continue; // ajout manuel ou import Maxroll/D4Builds : déjà complet
         const m = matcher.matchSlug(a.slug);
         if (m.key) Object.assign(a, { key: m.key, keys: m.keys, must: m.must });
@@ -339,4 +375,4 @@ function refreshBuildKeys(build, matcher) {
   }
 }
 
-module.exports = { importBuild, refreshBuildKeys, emptyBuild, SLOT_NAMES };
+module.exports = { importBuild, refreshBuildKeys, emptyBuild, mainStatAffix, SLOT_NAMES };
