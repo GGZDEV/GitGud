@@ -16,10 +16,12 @@ const INV_COLS = 11;
 const INV_ROWS = 3;
 const EQUIP_SLOTS = ["helm", "chest-armor", "gloves", "pants", "boots", "weapon", "offhand", "amulet", "ring-1", "ring-2"];
 // Version des règles de mémorisation de l'équipement : les données enregistrées avant sont nettoyées
-const EQUIP_RULES = 2;
+const EQUIP_RULES = 3;
 
 // Emplacement mémorisé (« ring-1 ») → emplacement lu sur l'objet (« ring »)
-const itemSlotOf = (key) => (/^ring/.test(key) ? "ring" : key);
+// Les charmes sont plusieurs : « charm:<nom> »
+const itemSlotOf = (key) => (/^ring/.test(key) ? "ring" : /^charm/.test(key) ? "charm" : key);
+const MAX_CHARMS = 6;
 
 // Textes d'autres fenêtres du jeu lus comme des objets (enchanteur, erreurs de traduction du jeu)
 const JUNK_NAME = /no grammatical form|materiaux requis|required materials|^objet$|^item$/;
@@ -105,12 +107,18 @@ class D4Manager extends EventEmitter {
   // l'équipement. Positions remises à zéro (une synchronisation suffit à les retrouver) et objets
   // incohérents retirés : mauvais type, texte parasite, ou objet présent dans le sac.
   cleanEquipped() {
-    if ((this.state.equipRules || 0) >= EQUIP_RULES) return;
-    this.state.positions.equip = {};
+    const rules = this.state.equipRules || 0;
+    if (rules >= EQUIP_RULES) return;
+    if (rules < 2) this.state.positions.equip = {};
     for (const c of this.state.characters) {
       for (const [key, it] of Object.entries(c.equipped)) {
         this.reparse(it);
         if (!fitsSlot(it, key) || this.inBag(it, c)) delete c.equipped[key];
+        // Un seul charme mémorisé auparavant : rangé avec les autres
+        else if (key === "charm") {
+          delete c.equipped.charm;
+          c.equipped[`charm:${it.name}`] = it;
+        }
       }
     }
     this.state.equipRules = EQUIP_RULES;
@@ -465,6 +473,8 @@ class D4Manager extends EventEmitter {
   // ---------- Infobulles reçues du jeu ----------
 
   async onTooltip({ lines, raw, isItem, at }) {
+    this.lastTooltipAt = Date.now();
+    this.captureSheet(raw || lines);
     // Compétences, Parangon, fiche de personnage : reconnus avant les objets
     const t = parseTooltip(raw || lines);
     // Un objet survolé fiche de personnage ouverte reste un objet
@@ -523,6 +533,7 @@ class D4Manager extends EventEmitter {
         }
       }
     }
+    this.recordSeen(t);
     const plan = this.variant?.plan;
     if (!plan) {
       if (Date.now() - (this.noPlanAt || 0) > 60000) {
@@ -556,8 +567,16 @@ class D4Manager extends EventEmitter {
         }
       }
     }
+    if (slot === "charm") slot = `charm:${item.name}`;
     if (!fitsSlot(item, slot) || this.inBag(item)) return;
+    item.seenAt = Date.now();
     this.equipped[slot] = item;
+    // Charmes : les plus récemment vus portés, autant que d'emplacements
+    const charms = Object.keys(this.equipped).filter((k) => /^charm/.test(k));
+    if (charms.length > MAX_CHARMS) {
+      charms.sort((a, b) => (this.equipped[a].seenAt || 0) - (this.equipped[b].seenAt || 0));
+      for (const k of charms.slice(0, charms.length - MAX_CHARMS)) delete this.equipped[k];
+    }
     if (!silent && !this.inInventoryGrid(cursor)) known[slot] = cursor;
     this.save();
     if (!silent) this.emit("sync", { slot, item, done: this.syncedSlots() });
@@ -709,6 +728,52 @@ class D4Manager extends EventEmitter {
     }, 2000);
   }
 
+  // ---------- Ce que le personnage a réellement (fiche, compétences, glyphes) ----------
+
+  // Fiche de personnage : le jeu l'ajoute aux infobulles quand elle est ouverte (« Dégâts des
+  // armes : 3 454 », « Force : 217 (apport des objets : 14)… », robustesse par type de dégâts).
+  captureSheet(lines) {
+    if (!lines?.some((l) => SHEET_HINT.test(l))) return;
+    const sheet = { ...(this.char.sheet || {}), at: Date.now() };
+    const stats = { ...(sheet.stats || {}) };
+    lines.forEach((raw, i) => {
+      const l = raw.replace(/[  ]/g, " ").trim();
+      let m = l.match(/^(Dégâts des armes|Weapon Damage)\s*:\s*([\d ,.]+)/i);
+      if (m) return (sheet.weaponDamage = sheetNum(m[2]));
+      if (/robustesse est une estimation|toughness is an estimate/i.test(l)) {
+        sheet.toughness = {};
+        for (const [, k, v] of l.matchAll(/(Physique|Feu|Froid|Foudre|Poison|Ombres|Armure|Maximum de points de vie|Physical|Fire|Cold|Lightning|Shadow|Armor|Maximum Life)\s*:\s*([\d ,.]+)/gi)) sheet.toughness[k] = sheetNum(v);
+        return;
+      }
+      m = l.match(/^(Force|Intelligence|Volonté|Dextérité|Strength|Willpower|Dexterity)\s*:\s*([\d ,.]+)/i);
+      if (m) return (stats[m[1]] = sheetNum(m[2]));
+      // Libellé suivi de sa valeur sur la ligne d'après (« Résistance au poison », « 3 447 »)
+      const next = (lines[i + 1] || "").replace(/[  ]/g, " ").trim();
+      if (l.length < 45 && /^[A-ZÀ-Ý]/.test(l) && !/[:.]/.test(l) && /^\d[\d ]*([,.]\d+)?\s*%?$/.test(next)) stats[l] = next;
+    });
+    sheet.stats = stats;
+    this.char.sheet = sheet;
+    this.saveSoon();
+  }
+
+  // Compétences, modificateurs et glyphes survolés : ce que le personnage a vraiment
+  recordSeen(t) {
+    const c = this.char;
+    const seen = (c.seen ||= { skills: {}, mods: {}, glyphs: {}, nodes: {} });
+    const at = Date.now();
+    if (t.kind === "skill" && t.name) seen.skills[t.name] = { rank: t.rank, max: t.max, learned: t.learned, at };
+    else if (t.kind === "mod" && t.name) seen.mods[t.name] = { learned: t.learned, at };
+    else if (t.kind === "socket" && t.glyph) seen.glyphs[t.glyph] = { at };
+    else if (t.kind === "node" && t.name) seen.nodes[t.name] = { rarity: t.rarity, allocated: t.allocated, at };
+    else return;
+    this.saveSoon();
+  }
+
+  saveSoon() {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.save(), 2000);
+  }
+
   // ---------- Ce que le jeu annonce (cibles, objectifs, ressources) ----------
 
   // Ressource lue par le lecteur d'écran (« Vigueur : 80 % ») : elle trahit la classe jouée. Chaque
@@ -820,36 +885,140 @@ class D4Manager extends EventEmitter {
     const char = (named && this.state.characters.find((c) => c.buildId === named.id)) || (named ? null : this.char);
     const v = b && (named ? this.variantNamedIn(b, question) : this.variant);
     const evalV = b && v ? this.completed(b, v) : null;
-    out.push(`Personnage suivi : ${this.charLabel()}${this.char.className ? ` (${this.char.className})` : ""}`);
-    if (this.state.builds.length) {
-      out.push(`Builds enregistrés dans le panneau : ${this.state.builds.map((x) => {
-        const owner = this.state.characters.find((c) => c.buildId === x.id);
-        return `« ${x.name} » (${x.className || "?"}${owner ? `, personnage ${this.charLabel(owner)}` : ""})`;
-      }).join(" ; ")}`);
-    }
+    out.push(
+      "Données Diablo IV lues dans le jeu par GitGud (personnage, build, équipement, compétences). Tu les as déjà : ne demande pas " +
+        "au joueur son build, son lien ou son équipement. Appuie tes conseils sur ces données et sur la capture. S'il manque une " +
+        "information utile, dis laquelle et comment la fournir (ex. survoler ses compétences, ouvrir sa fiche de personnage).",
+    );
+    out.push(`\nPersonnage joué : ${this.charLabel()}${this.char.className ? ` (${this.className(this.char.className)})` : ""}${this.build ? `, build suivi « ${this.build.name} », variante ${this.variant?.name}` : ", aucun build associé"}`);
+    const others = this.state.characters.filter((c) => c.id !== this.char.id);
+    if (others.length) out.push(`Autres personnages : ${others.map((c) => `${this.charLabel(c)}${c.className ? ` (${this.className(c.className)})` : ""}`).join(", ")}`);
     if (named && named.id !== this.build?.id) {
       out.push(`La question porte sur le build « ${named.name} »${char ? ` (personnage ${this.charLabel(char)})` : ""} : réponds avec ce build-là, ses données sont ci-dessous.`);
     }
-    if (b && v) out.push(...this.buildLines(b, v));
-    else out.push("Aucun build importé (le joueur peut en importer un dans Paramètres → Jeux).");
-    const eq = Object.entries(char?.equipped || {});
-    if (eq.length && evalV) {
-      out.push(`\nÉquipement porté par ${this.charLabel(char)} (lu dans le jeu) :`);
-      for (const [slot, it] of eq) {
-        const ev = evaluate({ ...it, slot: slot.startsWith("ring") ? "ring" : it.slot }, evalV, {});
-        out.push(`- ${slot} : ${it.name} (${it.typeLine}, ${it.power ?? "?"}) — ${it.affixes.map((a) => a.text).join(" | ")}${it.power_text ? ` — pouvoir : ${it.power_text}` : ""}${ev ? ` → ${ev.wantedCount}/${ev.total} affixes du build${ev.missing.length ? `, manque ${ev.missing.join(", ")}` : ""}` : ""}`);
-      }
-    }
+    out.push(...this.sheetLines(char));
+    if (b && v) out.push("", ...this.buildLines(b, v));
+    else out.push("Aucun build importé (le joueur peut en importer un dans le panneau Diablo IV).");
+    if (char && evalV) out.push(...this.gearLines(char, evalV));
+    if (char) out.push(...this.seenLines(char, v));
+
     const last = this.state.lastItem;
     if (last && /\b(ce|cet|cette|celui|celle|l'objet|item|loot|garde|prendre|equipe)/i.test(question)) {
       const ev = evaluate(last, this.evalVariant, this.equipped, this.otherVariants());
       out.push(`\nDernier objet survolé : ${last.name} (${last.typeLine}, ${last.power ?? "?"}) — ${last.affixes.map((a) => a.text).join(" | ")}${last.power_text ? ` — pouvoir : ${last.power_text}` : ""}${ev ? ` → verdict local : ${ev.verdict.text}` : ""}`);
     }
-    const inv = this.char.inventory.filter((c) => c.item && c.eval && c.eval.verdict.level !== "bad");
-    if (inv.length) out.push(`\nInventaire scanné, objets intéressants : ${inv.map((c) => `${c.item.name} (${c.eval.slotName}, ${c.eval.verdict.text})`).join(" ; ")}`);
+    const inv = this.char.inventory.filter((c) => c.item && c.eval && ["top", "good", "later"].includes(c.eval.verdict.level));
+    if (inv.length) out.push(`\nSac (dernier scan), objets à garder : ${inv.map((c) => `${c.item.name} (${c.eval.slotName}, ${c.eval.verdict.text})`).join(" ; ")}`);
     out.push(this.liveContext());
-    return out.filter(Boolean).join("\n");
+    return out.filter((l) => l != null).join("\n").replace(/\n{3,}/g, "\n\n");
   }
+
+  // « Sacresprit / Spiritborn »
+  className(en) {
+    const c = Object.values(this.matcher?.dict?.classes || {}).find((x) => x.en === en);
+    return c?.fr && c.fr !== en ? `${c.fr} / ${en}` : en;
+  }
+
+  // Fiche de personnage lue dans le jeu
+  sheetLines(char) {
+    const s = char?.sheet;
+    if (!s) return ["Fiche de personnage : jamais lue (l'ouvrir dans le jeu, touche C, pour que GitGud la retienne)."];
+    const t = s.toughness || {};
+    const res = Object.entries(t).filter(([k]) => !/armure|armor|points de vie|life/i.test(k));
+    const parts = [
+      s.weaponDamage != null && `dégâts des armes ${fmtNum(s.weaponDamage)}`,
+      t["Maximum de points de vie"] != null && `vie max ${fmtNum(t["Maximum de points de vie"])}`,
+      t.Armure != null && `armure ${fmtNum(t.Armure)}`,
+      res.length && `robustesse par type de dégâts : ${res.map(([k, x]) => `${k} ${fmtNum(x)}`).join(", ")}`,
+      Object.keys(s.stats || {}).length && Object.entries(s.stats).slice(0, 30).map(([k, x]) => `${k} ${typeof x === "number" ? fmtNum(x) : x}`).join(", "),
+    ].filter(Boolean);
+    return [`Fiche de personnage (lue ${ago(s.at)}) : ${parts.join(" ; ")}`];
+  }
+
+  // Équipement porté, affixe par affixe face au build : ✓ prioritaire, ~ utile, ✗ inutile
+  gearLines(char, evalV) {
+    const eq = Object.entries(char.equipped || {});
+    if (!eq.length) return ["\nÉquipement porté : pas encore lu (survoler ses pièces portées, ou synchroniser l'équipement depuis le panneau Diablo IV)."];
+    const out = [`\nÉquipement porté par ${this.charLabel(char)} (lu dans le jeu ; ✓ prioritaire pour l'emplacement, ~ utile ailleurs dans le build, ✗ inutile) :`];
+    const gaps = [];
+    const order = (k) => {
+      const i = EQUIP_SLOTS.indexOf(k);
+      return i < 0 ? 99 : i;
+    };
+    const mark = (c) => (c.tag === "prio" ? "✓" : c.tag === "build" || c.tag === "near" ? "~" : "✗");
+    for (const [slot, it] of [...eq].sort(([a], [z]) => order(a) - order(z))) {
+      if (/^(charm|seal|gem)/.test(slot)) continue;
+      const ev = evaluate({ ...it, slot: itemSlotOf(slot) }, evalV, {});
+      const affixes = ev ? ev.checks.map((c) => `${mark(c)} ${c.text}`).join(" | ") : it.affixes.map((a) => a.text).join(" | ");
+      const rarity = [it.ancestral ? "ancestral" : null, it.rarity].filter(Boolean).join(" ");
+      const aspect = ev?.aspect ? ` ; ${ev.aspect.label} ${ev.aspect.has ? "présent" : "manquant"}` : "";
+      out.push(`- ${ev?.slotName || slot} : ${it.name} (${rarity || it.typeLine}, puissance ${it.power ?? "?"}) — ${affixes}${it.power_text ? ` — pouvoir : ${it.power_text.length > 260 ? it.power_text.slice(0, 260) + "…" : it.power_text}` : ""}${aspect}${ev?.missing.length ? ` ; affixes du build absents : ${ev.missing.join(", ")}` : ""}`);
+      if (!ev) continue;
+      const target = evalV.slots.find((x) => x.slot === ev.slot);
+      if (ev.aspect && !ev.aspect.has) gaps.push(`${ev.slotName} sans ${ev.aspect.label}`);
+      if (target?.kind === "unique" && !ev.isTargetUnique) gaps.push(`${ev.slotName} : l'unique visé (${target.titleFr || target.title}) n'est pas porté`);
+      if (ev.missing.length >= 2) gaps.push(`${ev.slotName} : ${ev.missing.length} affixes du build absents`);
+    }
+    const missingSlots = EQUIP_SLOTS.filter((k) => !char.equipped[k] && evalV.slots.some((x) => x.slot === k || (k === "weapon" && /weapon/.test(x.slot))));
+    if (missingSlots.length) out.push(`- Pièces portées pas encore lues : ${missingSlots.join(", ")}`);
+    const charms = eq.filter(([k]) => /^(charm|seal)/.test(k)).map(([, it]) => `${it.name}${it.power_text ? ` (${it.power_text.slice(0, 140)})` : ""}`);
+    if (charms.length) out.push(`- Charmes et sceau vus portés : ${charms.join(" ; ")}`);
+    const wanted = evalV.slots.filter((x) => /charm/.test(x.kind) && (x.titleFr || x.title)).map((x) => x.titleFr || x.title);
+    if (wanted.length) {
+      const have = (n) => eq.some(([k, it]) => /^charm/.test(k) && norm(it.name).includes(norm(n)));
+      const miss = wanted.filter((n) => !have(n));
+      if (miss.length) gaps.push(`charmes du build non vus portés : ${miss.join(", ")}`);
+    }
+    if (gaps.length) out.push(`Écarts principaux avec le build : ${gaps.join(" ; ")}`);
+    return out;
+  }
+
+  // Compétences, modificateurs et glyphes vus dans le jeu, face au plan du build
+  seenLines(char, v) {
+    const seen = char.seen;
+    const out = [];
+    if (!seen || !Object.keys(seen.skills || {}).length) {
+      out.push("\nCompétences réelles du personnage : pas encore lues (survoler l'arbre de compétences et le Parangon pour que GitGud les retienne).");
+    } else {
+      const learned = Object.entries(seen.skills).filter(([, x]) => x.learned).map(([n, x]) => `${n} ${x.rank}/${x.max}`);
+      out.push(`\nCompétences apprises (vues dans le jeu, ${ago(Math.max(...Object.values(seen.skills).map((x) => x.at)))}) : ${learned.join(", ") || "aucune"}`);
+      const mods = Object.entries(seen.mods || {}).filter(([, x]) => x.learned).map(([n]) => n);
+      if (mods.length) out.push(`Modificateurs appris : ${mods.join(", ")}`);
+      const plan = v?.plan?.skills || [];
+      if (plan.length) {
+        const find = (name) => name && Object.entries(seen.skills).find(([n]) => norm(n) === norm(name));
+        const diffs = [];
+        const unseen = [];
+        for (const p of plan) {
+          const s = find(p.fr) || find(p.en);
+          if (!s) unseen.push(p.fr || p.en);
+          else if (!s[1].learned) diffs.push(`${p.fr} non apprise (visée rang ${p.rank})`);
+          else if (p.rank && s[1].rank < p.rank) diffs.push(`${p.fr} rang ${s[1].rank} au lieu de ${p.rank}`);
+        }
+        if (diffs.length) out.push(`Écarts avec les compétences du build : ${diffs.join(" ; ")}`);
+        if (unseen.length) out.push(`Compétences du build pas encore vues dans le jeu : ${unseen.join(", ")}`);
+      }
+    }
+    const glyphs = Object.keys(seen?.glyphs || {});
+    if (glyphs.length) out.push(`Glyphes vus sur le Parangon : ${glyphs.join(", ")}`);
+    const nodes = Object.entries(seen?.nodes || {}).filter(([, x]) => x.allocated).map(([n]) => n);
+    if (nodes.length) out.push(`Nœuds rares / légendaires du Parangon pris : ${nodes.slice(0, 30).join(", ")}`);
+    return out;
+  }
+}
+
+// Fiche de personnage présente dans une infobulle
+const SHEET_HINT = /^(Dégâts des armes|Weapon Damage)\s*:|robustesse est une estimation|toughness is an estimate|^(Force|Intelligence|Volonté|Dextérité)\s*:\s*\d/i;
+const sheetNum = (t) => Number(String(t).replace(/[\s  ]/g, "").replace(",", ".")) || 0;
+const fmtNum = (n) => Number(n).toLocaleString("fr-FR");
+// « il y a 12 min »
+function ago(t) {
+  if (!t) return "à une date inconnue";
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `il y a ${h} h` : `il y a ${Math.round(h / 24)} jours`;
 }
 
 // Minuscules sans accents, pour reconnaître un nom de build ou de classe dans une question

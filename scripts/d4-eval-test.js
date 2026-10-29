@@ -133,5 +133,35 @@ test("équipement mémorisé : pas d'objet incohérent ni de position hors synch
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test("fiche de personnage lue dans une infobulle, puis donnée à l'IA", () => {
+  const { D4Manager } = require("../src/games/d4/manager");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gitgud-d4-"));
+  const m = new D4Manager(dir);
+  m.matcher = matcher;
+  // Lignes réelles reçues en survolant une pièce portée, fiche ouverte (espaces insécables du jeu)
+  m.captureSheet([
+    "GANTS D’AVENTURE DE PESTILENCE",
+    "Dégâts des armes : 3 454. Une estimation des dégâts et de la vitesse d’attaque de l’arme que vous maniez actuellement.",
+    "La robustesse est une estimation de votre capacité de survie basée sur vos points de vie, votre armure, vos résistances et l’ensemble de vos sources de réduction des dégâts.. Physique : 177 853. Feu : 172 664. Froid : 173 839. Foudre : 137 001 (plus bas). Poison : 181 838. Ombres : 182 467. Armure : 13 268. Maximum de points de vie : 19 437",
+    "Force : 217 (apport des objets : 14). Augmente les chances d’infliger un coup critique de +0,5 %. Augmente l’armure de +435",
+    "Résistance au poison",
+    "3 447",
+  ]);
+  const s = m.char.sheet;
+  assert.strictEqual(s.weaponDamage, 3454);
+  assert.strictEqual(s.toughness.Foudre, 137001);
+  assert.strictEqual(s.toughness["Maximum de points de vie"], 19437);
+  assert.strictEqual(s.stats.Force, 217);
+  assert.strictEqual(s.stats["Résistance au poison"], "3 447");
+  // Compétence survolée retenue
+  m.recordSeen({ kind: "skill", name: "Ravageur", rank: 5, max: 15, learned: true });
+  const ctx = m.context("je dois faire quoi pour augmenter mes dégâts ?");
+  assert.ok(/dégâts des armes 3/.test(ctx) && /vie max 19/.test(ctx), ctx.slice(0, 400));
+  assert.ok(/Ravageur 5\/15/.test(ctx));
+  assert.ok(/ne demande pas/.test(ctx));
+  clearTimeout(m.saveTimer);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 console.log(failed ? `\n${failed} échec(s)` : "\nTout est vert.");
 process.exit(failed ? 1 : 0);

@@ -1,6 +1,6 @@
 {
   "name": "gitgud",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Assistant IA open source pour jeux PC (voix + vision) : abonnement ChatGPT/Claude ou clés API, Whisper local",
   "main": "main.js",
   "private": true,

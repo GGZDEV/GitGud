@@ -27,7 +27,7 @@ const { Timers, parseTimerCommand, formatDuration } = require("./src/timers");
 const { TagFilter, stripTags } = require("./src/stream/tags");
 const { SentenceSplitter } = require("./src/stream/sentences");
 const { classify } = require("./src/fastlane");
-const { windowRect } = require("./src/winrect");
+const { windowRect, foregroundTitle } = require("./src/winrect");
 const { D4Manager, EQUIP_SLOTS } = require("./src/games/d4/manager");
 const diablo4Game = require("./src/games/diablo4");
 
@@ -359,9 +359,19 @@ function openTextInput() {
 // ---------- Capture ----------
 
 // Noms des fenêtres ouvertes (sans image : rapide), pour reconnaître le jeu en cours.
+// Fenêtre au premier plan d'abord : un jeu en plein écran exclusif manque parfois à la liste
 async function openWindowNames() {
   const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 0, height: 0 } });
-  return sources.map((s) => s.name);
+  return [foregroundTitle(), ...sources.map((s) => s.name)].filter(Boolean);
+}
+
+// Jeu en cours : d'après la capture et les fenêtres, sinon Diablo IV si sa liaison (D4LF) est active
+// ou s'il vient d'envoyer du texte : le contexte du personnage ne doit jamais manquer.
+function currentGame(shot, windows) {
+  const game = detectGame(shot?.name || settings.target?.name, windows);
+  if (game) return game;
+  if (d4 && (d4.bridge.status === "connected" || Date.now() - (d4.lastTooltipAt || 0) < 10 * 60000)) return diablo4Game;
+  return null;
 }
 
 async function captureTarget() {
@@ -416,7 +426,7 @@ async function ask(question) {
 
   try {
     const [shot, windows] = await Promise.all([settings.useVision ? captureTarget() : null, openWindowNames()]);
-    const game = detectGame(shot?.name || settings.target?.name, windows);
+    const game = currentGame(shot, windows);
     if (game) lastGame = game;
     send("config", overlayConfig(game ? `${game.name}${game.context ? " · données en direct" : ""}` : shot?.name));
     const where = game?.name || shot?.name || settings.target?.name || "inconnue";

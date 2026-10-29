@@ -16,6 +16,8 @@ function load() {
       DwmGetWindowAttribute: dwm.func("long __stdcall DwmGetWindowAttribute(intptr_t hwnd, uint32 attr, _Out_ GG_RECT *rect, uint32 size)"),
       GetWindowRect: user32.func("bool __stdcall GetWindowRect(intptr_t hwnd, _Out_ GG_RECT *rect)"),
       IsIconic: user32.func("bool __stdcall IsIconic(intptr_t hwnd)"),
+      GetForegroundWindow: user32.func("intptr_t __stdcall GetForegroundWindow()"),
+      GetWindowTextW: user32.func("int __stdcall GetWindowTextW(intptr_t hwnd, _Out_ uint16_t *text, int max)"),
     };
   } catch (err) {
     console.warn("winrect :", err.message);
@@ -40,4 +42,20 @@ function windowRect(sourceId) {
   }
 }
 
-module.exports = { windowRect };
+// Titre de la fenêtre au premier plan (le jeu, quand le joueur appuie sur son raccourci). Un jeu en
+// plein écran exclusif n'apparaît pas toujours dans la liste des fenêtres de desktopCapturer.
+function foregroundTitle() {
+  const a = load();
+  if (!a) return null;
+  try {
+    const hwnd = a.GetForegroundWindow();
+    if (!hwnd) return null;
+    const buf = new Uint16Array(256);
+    const n = a.GetWindowTextW(hwnd, buf, buf.length);
+    return n > 0 ? String.fromCharCode(...buf.subarray(0, n)) : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { windowRect, foregroundTitle };
